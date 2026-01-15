@@ -10,6 +10,7 @@ import {
   Gauge,
   Activity,
 } from "lucide-react";
+import rdiiPdfPath from "@assets/RDII_1768491160353.pdf";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -28,6 +29,13 @@ interface DocumentItem {
 }
 
 const epaDocuments: DocumentItem[] = [
+  {
+    title: "InfoSWMM RDII Analyst Guide",
+    description: "Comprehensive guide for RDII analysis using genetic algorithm calibration, RTK parameter optimization, and unit hydrograph methods. Reference documentation for the GA calibration feature.",
+    url: rdiiPdfPath,
+    type: "pdf",
+    publication: "InfoSWMM",
+  },
   {
     title: "Computer Tools for Sanitary Sewer System Capacity Analysis and Planning",
     description: "Main technical report documenting SSOAP toolbox capabilities, methods, and software architecture. Comprehensive guide covering SWMM5 integration, RDII analysis, and capacity planning.",
