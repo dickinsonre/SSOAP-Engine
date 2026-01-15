@@ -605,14 +605,7 @@ export default function Dashboard() {
             />
           </div>
 
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
-            <QuickActionCard
-              title="Import SWMM Model"
-              description="Upload .inp or .rpt file"
-              icon={Upload}
-              onClick={() => setImportDialogOpen(true)}
-              variant="primary"
-            />
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
             <ICMImportDialog
               trigger={
                 <div className="h-full">
@@ -635,13 +628,14 @@ export default function Dashboard() {
               description="Execute SWMM5 analysis"
               icon={Play}
               href="/simulation"
-              variant="accent"
+              variant="primary"
             />
             <QuickActionCard
               title="RDII Analysis"
               description="Configure RTK parameters"
               icon={Waves}
               href="/rdii-analysis"
+              variant="accent"
             />
             <QuickActionCard
               title="View Hydrographs"

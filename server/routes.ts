@@ -10,6 +10,14 @@ import {
 import multer from "multer";
 import path from "path";
 import fs from "fs";
+import {
+  runGeneticAlgorithm,
+  generateSyntheticObservedData,
+  defaultGAConfig,
+  type GAConfig,
+  type ObservedData,
+  type CalibrationResult,
+} from "./genetic-algorithm";
 
 const upload = multer({
   dest: "uploads/",
@@ -412,6 +420,103 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       res.status(204).send();
     } catch (error) {
       res.status(500).json({ error: "Failed to delete RDII parameters" });
+    }
+  });
+
+  // GA Calibration for RDII
+  app.get("/api/calibration/config", (req, res) => {
+    res.json(defaultGAConfig);
+  });
+
+  app.post("/api/calibration/run", async (req, res) => {
+    try {
+      const { rdiiParameterId, gaConfig, observedData } = req.body;
+      
+      if (!rdiiParameterId) {
+        return res.status(400).json({ error: "RDII Parameter ID required" });
+      }
+
+      const rdiiParams = await storage.getRDIIParameter(rdiiParameterId);
+      if (!rdiiParams) {
+        return res.status(404).json({ error: "RDII parameters not found" });
+      }
+
+      const config: GAConfig = gaConfig || defaultGAConfig;
+      
+      let observed: ObservedData;
+      if (observedData && observedData.flows && observedData.rainfall && observedData.flows.length > 0) {
+        observed = {
+          timestamps: observedData.timestamps || observedData.flows.map((_: unknown, i: number) => i),
+          flows: observedData.flows,
+          rainfall: observedData.rainfall,
+        };
+      } else {
+        const sampleRainfall = Array(96).fill(0).map((_, i) => {
+          if (i >= 10 && i <= 16) return 0.1 + Math.random() * 0.05;
+          if (i >= 40 && i <= 48) return 0.08 + Math.random() * 0.04;
+          return 0;
+        });
+        
+        const targetParams = {
+          r1: Math.max(0.001, rdiiParams.r1 * (0.8 + Math.random() * 0.4)),
+          t1: Math.max(0.5, rdiiParams.t1 * (0.9 + Math.random() * 0.2)),
+          k1: Math.max(1.5, rdiiParams.k1 * (0.9 + Math.random() * 0.2)),
+          r2: Math.max(0.001, rdiiParams.r2 * (0.8 + Math.random() * 0.4)),
+          t2: Math.max(2, rdiiParams.t2 * (0.9 + Math.random() * 0.2)),
+          k2: Math.max(2, rdiiParams.k2 * (0.9 + Math.random() * 0.2)),
+          r3: Math.max(0.001, rdiiParams.r3 * (0.8 + Math.random() * 0.4)),
+          t3: Math.max(6, rdiiParams.t3 * (0.9 + Math.random() * 0.2)),
+          k3: Math.max(2, rdiiParams.k3 * (0.9 + Math.random() * 0.2)),
+        };
+        
+        observed = generateSyntheticObservedData(targetParams, sampleRainfall, rdiiParams.area, 0.05);
+      }
+
+      const result = runGeneticAlgorithm(config, observed, rdiiParams.area);
+      
+      res.json({
+        success: true,
+        result,
+        originalParameters: {
+          r1: rdiiParams.r1, t1: rdiiParams.t1, k1: rdiiParams.k1,
+          r2: rdiiParams.r2, t2: rdiiParams.t2, k2: rdiiParams.k2,
+          r3: rdiiParams.r3, t3: rdiiParams.t3, k3: rdiiParams.k3,
+        },
+      });
+    } catch (error) {
+      console.error("Calibration error:", error);
+      res.status(500).json({ error: "Failed to run calibration" });
+    }
+  });
+
+  app.post("/api/calibration/apply", async (req, res) => {
+    try {
+      const { rdiiParameterId, optimizedParameters } = req.body;
+      
+      if (!rdiiParameterId || !optimizedParameters) {
+        return res.status(400).json({ error: "RDII Parameter ID and optimized parameters required" });
+      }
+
+      const updated = await storage.updateRDIIParameters(rdiiParameterId, {
+        r1: optimizedParameters.r1,
+        t1: optimizedParameters.t1,
+        k1: optimizedParameters.k1,
+        r2: optimizedParameters.r2,
+        t2: optimizedParameters.t2,
+        k2: optimizedParameters.k2,
+        r3: optimizedParameters.r3,
+        t3: optimizedParameters.t3,
+        k3: optimizedParameters.k3,
+      });
+
+      if (!updated) {
+        return res.status(404).json({ error: "RDII parameters not found" });
+      }
+
+      res.json({ success: true, updatedParameters: updated });
+    } catch (error) {
+      console.error("Apply calibration error:", error);
+      res.status(500).json({ error: "Failed to apply calibration" });
     }
   });
 

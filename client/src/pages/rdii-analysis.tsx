@@ -10,7 +10,9 @@ import {
   BarChart3,
   Info,
   Save,
+  Dna,
 } from "lucide-react";
+import { GACalibrationDialog } from "@/components/ga-calibration-dialog";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -125,10 +127,12 @@ function RDIIParameterEditor({
   parameters,
   onSave,
   isSaving,
+  showCalibration = true,
 }: {
   parameters: RDIIParameters;
   onSave: (data: Partial<InsertRDIIParameters>) => void;
   isSaving: boolean;
+  showCalibration?: boolean;
 }) {
   const [r1, setR1] = useState(parameters.r1);
   const [r2, setR2] = useState(parameters.r2);
@@ -321,7 +325,18 @@ function RDIIParameterEditor({
         </Card>
       </div>
 
-      <div className="flex justify-end">
+      <div className="flex justify-end gap-3">
+        {showCalibration && (
+          <GACalibrationDialog
+            parameters={parameters}
+            trigger={
+              <Button variant="outline" data-testid="button-ga-calibration">
+                <Dna className="mr-2 h-4 w-4" />
+                GA Calibration
+              </Button>
+            }
+          />
+        )}
         <Button onClick={handleSave} disabled={isSaving} data-testid="button-save-rdii">
           <Save className="mr-2 h-4 w-4" />
           {isSaving ? "Saving..." : "Save Parameters"}
