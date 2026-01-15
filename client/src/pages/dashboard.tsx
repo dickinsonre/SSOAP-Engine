@@ -7,6 +7,7 @@ import {
   ChevronRight,
   Droplets,
   FileUp,
+  FileSpreadsheet,
   FolderOpen,
   Gauge,
   Play,
@@ -18,6 +19,7 @@ import {
   Waves,
   Loader2,
 } from "lucide-react";
+import { ICMImportDialog } from "@/components/icm-import-dialog";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -603,13 +605,30 @@ export default function Dashboard() {
             />
           </div>
 
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
             <QuickActionCard
               title="Import SWMM Model"
               description="Upload .inp or .rpt file"
               icon={Upload}
               onClick={() => setImportDialogOpen(true)}
               variant="primary"
+            />
+            <ICMImportDialog
+              trigger={
+                <div className="h-full">
+                  <Card className="hover-elevate cursor-pointer h-full transition-all">
+                    <CardContent className="flex items-center gap-4 p-4">
+                      <div className="flex h-12 w-12 items-center justify-center rounded-xl shrink-0 bg-emerald-500 text-white">
+                        <FileSpreadsheet className="h-6 w-6" />
+                      </div>
+                      <div className="min-w-0">
+                        <h3 className="font-medium text-sm">Import from ICM</h3>
+                        <p className="text-xs text-muted-foreground truncate">InfoWorks CSV data</p>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+              }
             />
             <QuickActionCard
               title="Run Simulation"
