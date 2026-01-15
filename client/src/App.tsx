@@ -18,6 +18,7 @@ import RDIIAnalysisPage from "@/pages/rdii-analysis";
 import HydrographPage from "@/pages/hydrograph";
 import ConditionAssessmentPage from "@/pages/condition-assessment";
 import SSOEventsPage from "@/pages/sso-events";
+import DocumentsPage from "@/pages/documents";
 import SettingsPage from "@/pages/settings";
 import NotFound from "@/pages/not-found";
 
@@ -31,6 +32,7 @@ function Router() {
       <Route path="/hydrograph" component={HydrographPage} />
       <Route path="/condition-assessment" component={ConditionAssessmentPage} />
       <Route path="/sso-events" component={SSOEventsPage} />
+      <Route path="/documents" component={DocumentsPage} />
       <Route path="/settings" component={SettingsPage} />
       <Route component={NotFound} />
     </Switch>

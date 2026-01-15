@@ -9,6 +9,7 @@ import {
   Settings,
   Droplets,
   AlertTriangle,
+  FileText,
 } from "lucide-react";
 import {
   Sidebar,
@@ -67,6 +68,14 @@ const monitoringItems = [
     title: "SSO Events",
     url: "/sso-events",
     icon: AlertTriangle,
+  },
+];
+
+const resourceItems = [
+  {
+    title: "Documents",
+    url: "/documents",
+    icon: FileText,
   },
 ];
 
@@ -144,6 +153,28 @@ export function AppSidebar() {
           <SidebarGroupContent>
             <SidebarMenu>
               {monitoringItems.map((item) => (
+                <SidebarMenuItem key={item.title}>
+                  <SidebarMenuButton
+                    asChild
+                    isActive={location === item.url}
+                    tooltip={item.title}
+                  >
+                    <Link href={item.url} data-testid={`nav-link-${item.title.toLowerCase().replace(/\s+/g, '-')}`}>
+                      <item.icon className="h-4 w-4" />
+                      <span>{item.title}</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              ))}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+
+        <SidebarGroup>
+          <SidebarGroupLabel>Resources</SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              {resourceItems.map((item) => (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton
                     asChild
