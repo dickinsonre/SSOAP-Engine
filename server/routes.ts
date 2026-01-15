@@ -23,6 +23,18 @@ const upload = multer({
   },
 });
 
+const uploadICM = multer({
+  dest: "uploads/icm/",
+  fileFilter: (req, file, cb) => {
+    const ext = path.extname(file.originalname).toLowerCase();
+    if (ext === ".csv") {
+      cb(null, true);
+    } else {
+      cb(new Error("Only .csv files are allowed for ICM import"));
+    }
+  },
+});
+
 export async function registerRoutes(httpServer: Server, app: Express): Promise<Server> {
   // Ensure uploads directory exists
   if (!fs.existsSync("uploads")) {
@@ -226,6 +238,118 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     } catch (error) {
       res.status(500).json({ error: "Failed to delete simulation" });
     }
+  });
+
+  // ICM InfoWorks Import
+  if (!fs.existsSync("uploads/icm")) {
+    fs.mkdirSync("uploads/icm", { recursive: true });
+  }
+
+  app.post("/api/import/icm", uploadICM.array("files", 10), async (req, res) => {
+    try {
+      const files = req.files as Express.Multer.File[];
+      if (!files || files.length === 0) {
+        return res.status(400).json({ error: "No files uploaded" });
+      }
+      const projectId = req.body.projectId;
+      if (!projectId) {
+        return res.status(400).json({ error: "Project ID required" });
+      }
+
+      const importResults: { filename: string; type: string; recordCount: number; status: string }[] = [];
+
+      for (const file of files) {
+        const content = fs.readFileSync(file.path, "utf-8");
+        const lines = content.split("\n").filter(line => line.trim());
+        
+        let dataType = "unknown";
+        let recordCount = 0;
+
+        if (lines.length > 0) {
+          const header = lines[0].toLowerCase();
+          if (header.includes("node") || header.includes("manhole") || header.includes("junction")) {
+            dataType = "nodes";
+            recordCount = lines.length - 1;
+          } else if (header.includes("conduit") || header.includes("pipe") || header.includes("link")) {
+            dataType = "conduits";
+            recordCount = lines.length - 1;
+          } else if (header.includes("subcatchment") || header.includes("catchment")) {
+            dataType = "subcatchments";
+            recordCount = lines.length - 1;
+          } else if (header.includes("flow") || header.includes("hydrograph")) {
+            dataType = "flow_data";
+            recordCount = lines.length - 1;
+          } else {
+            dataType = "network_data";
+            recordCount = lines.length - 1;
+          }
+        }
+
+        importResults.push({
+          filename: file.originalname,
+          type: dataType,
+          recordCount,
+          status: "imported",
+        });
+
+        fs.renameSync(file.path, `uploads/icm/${projectId}_${file.originalname}`);
+      }
+
+      const simulation = await storage.createSimulation({
+        projectId,
+        name: `ICM Import - ${new Date().toLocaleDateString()}`,
+        inputFile: `/uploads/icm/${projectId}_${files[0].originalname}`,
+      });
+
+      res.status(201).json({
+        message: "ICM InfoWorks data imported successfully",
+        simulation,
+        importResults,
+        totalFiles: files.length,
+        totalRecords: importResults.reduce((sum, r) => sum + r.recordCount, 0),
+      });
+    } catch (error) {
+      console.error("ICM import error:", error);
+      res.status(500).json({ error: "Failed to import ICM data" });
+    }
+  });
+
+  app.get("/api/import/icm/formats", (req, res) => {
+    res.json({
+      supportedFormats: [
+        {
+          name: "Node Data",
+          description: "Manholes, junctions, and other network nodes",
+          requiredColumns: ["node_id", "x", "y", "ground_level"],
+          optionalColumns: ["invert_level", "chamber_depth", "cover_level"],
+        },
+        {
+          name: "Conduit Data",
+          description: "Pipes, channels, and other network links",
+          requiredColumns: ["link_id", "us_node_id", "ds_node_id", "conduit_type"],
+          optionalColumns: ["diameter", "length", "roughness", "gradient"],
+        },
+        {
+          name: "Subcatchment Data",
+          description: "Contributing drainage areas",
+          requiredColumns: ["subcatchment_id", "area", "node_id"],
+          optionalColumns: ["imperviousness", "width", "slope"],
+        },
+        {
+          name: "Flow Data",
+          description: "Time series flow measurements",
+          requiredColumns: ["timestamp", "flow"],
+          optionalColumns: ["node_id", "quality"],
+        },
+      ],
+      exportInstructions: [
+        "In ICM InfoWorks, right-click on your network in the Explorer Window",
+        "Select 'Export > to CSV'",
+        "Enable 'Include Database Field Names' option",
+        "Select 'Use InfoWorks Native Units' for best compatibility",
+        "Export each table (nodes, conduits, subcatchments) to separate CSV files",
+      ],
+    });
   });
 
   // RDII Parameters

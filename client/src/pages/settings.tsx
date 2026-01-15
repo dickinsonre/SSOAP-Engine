@@ -1,4 +1,3 @@
-import { useState } from "react";
 import {
   Settings,
   Moon,
@@ -8,6 +7,10 @@ import {
   ExternalLink,
   FileText,
   Github,
+  Palette,
+  Waves,
+  Cloud,
+  Anchor,
 } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -17,8 +20,17 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { useTheme } from "@/components/theme-provider";
 
+type ColorScheme = "steel" | "ocean" | "sky" | "navy";
+
+const colorSchemes: { id: ColorScheme; name: string; description: string; icon: React.ElementType; previewColor: string }[] = [
+  { id: "steel", name: "Steel Blue", description: "Professional & balanced", icon: Palette, previewColor: "bg-[hsl(207,85%,42%)]" },
+  { id: "ocean", name: "Ocean Blue", description: "Deep & rich tones", icon: Waves, previewColor: "bg-[hsl(215,90%,45%)]" },
+  { id: "sky", name: "Sky Blue", description: "Light & vibrant", icon: Cloud, previewColor: "bg-[hsl(195,85%,48%)]" },
+  { id: "navy", name: "Navy Blue", description: "Classic & authoritative", icon: Anchor, previewColor: "bg-[hsl(225,75%,38%)]" },
+];
+
 export default function SettingsPage() {
-  const { theme, setTheme } = useTheme();
+  const { theme, setTheme, colorScheme, setColorScheme } = useTheme();
 
   return (
     <div className="p-6 space-y-6 max-w-3xl">
@@ -35,9 +47,9 @@ export default function SettingsPage() {
           <CardDescription>Customize how the application looks</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="space-y-4">
+          <div className="space-y-6">
             <div className="space-y-3">
-              <Label className="text-sm font-medium">Theme</Label>
+              <Label className="text-sm font-medium">Theme Mode</Label>
               <RadioGroup
                 value={theme}
                 onValueChange={(value: "light" | "dark" | "system") => setTheme(value)}
@@ -88,6 +100,41 @@ export default function SettingsPage() {
                     <span className="text-sm font-medium">System</span>
                   </Label>
                 </div>
+              </RadioGroup>
+            </div>
+
+            <Separator />
+
+            <div className="space-y-3">
+              <Label className="text-sm font-medium">Color Scheme</Label>
+              <p className="text-xs text-muted-foreground mb-2">Choose a blue color palette for the application</p>
+              <RadioGroup
+                value={colorScheme}
+                onValueChange={(value: ColorScheme) => setColorScheme(value)}
+                className="grid grid-cols-2 gap-4"
+              >
+                {colorSchemes.map((scheme) => (
+                  <div key={scheme.id}>
+                    <RadioGroupItem
+                      value={scheme.id}
+                      id={`color-${scheme.id}`}
+                      className="peer sr-only"
+                      data-testid={`radio-color-${scheme.id}`}
+                    />
+                    <Label
+                      htmlFor={`color-${scheme.id}`}
+                      className="flex items-center gap-3 rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary cursor-pointer"
+                    >
+                      <div className={`h-10 w-10 rounded-md ${scheme.previewColor} flex items-center justify-center`}>
+                        <scheme.icon className="h-5 w-5 text-white" />
+                      </div>
+                      <div className="flex flex-col">
+                        <span className="text-sm font-medium">{scheme.name}</span>
+                        <span className="text-xs text-muted-foreground">{scheme.description}</span>
+                      </div>
+                    </Label>
+                  </div>
+                ))}
               </RadioGroup>
             </div>
           </div>

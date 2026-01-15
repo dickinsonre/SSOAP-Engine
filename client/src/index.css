@@ -2,8 +2,14 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ========================================
+   COLOR SCHEMES - Blue Variants
+   ======================================== */
+
+/* DEFAULT THEME: Steel Blue (Professional) */
 /* LIGHT MODE */
-:root {
+:root,
+:root[data-color-scheme="steel"] {
   --button-outline: rgba(0,0,0, .10);
   --badge-outline: rgba(0,0,0, .05);
   --opaque-button-border-intensity: -8;
@@ -87,7 +93,8 @@
   --destructive-border: hsl(from hsl(var(--destructive)) h s calc(l + var(--opaque-button-border-intensity)) / alpha);
 }
 
-.dark {
+.dark,
+.dark[data-color-scheme="steel"] {
   --button-outline: rgba(255,255,255, .10);
   --badge-outline: rgba(255,255,255, .05);
   --opaque-button-border-intensity: 9;
@@ -163,6 +170,384 @@
   /* Fallback for older browsers */
   --destructive-border: hsl(var(--destructive));
   --destructive-border: hsl(from hsl(var(--destructive)) h s calc(l + var(--opaque-button-border-intensity)) / alpha);
+}
+
+/* ========================================
+   OCEAN BLUE - Deep, rich blue tones
+   ======================================== */
+
+/* OCEAN BLUE - Light Mode */
+:root[data-color-scheme="ocean"] {
+  --button-outline: rgba(0,0,0, .10);
+  --badge-outline: rgba(0,0,0, .05);
+  --opaque-button-border-intensity: -8;
+  --elevate-1: rgba(0,0,0, .03);
+  --elevate-2: rgba(0,0,0, .08);
+  --background: 200 25% 97%;
+  --foreground: 215 25% 12%;
+  --border: 200 20% 90%;
+  --card: 200 22% 95%;
+  --card-foreground: 215 25% 12%;
+  --card-border: 200 18% 92%;
+  --sidebar: 200 20% 92%;
+  --sidebar-foreground: 215 25% 12%;
+  --sidebar-border: 200 18% 88%;
+  --sidebar-primary: 215 90% 45%;
+  --sidebar-primary-foreground: 215 95% 98%;
+  --sidebar-accent: 200 18% 85%;
+  --sidebar-accent-foreground: 215 25% 15%;
+  --sidebar-ring: 215 90% 45%;
+  --popover: 200 22% 90%;
+  --popover-foreground: 215 25% 12%;
+  --popover-border: 200 18% 86%;
+  --primary: 215 90% 45%;
+  --primary-foreground: 215 95% 98%;
+  --secondary: 200 16% 84%;
+  --secondary-foreground: 215 25% 15%;
+  --muted: 200 16% 86%;
+  --muted-foreground: 200 18% 35%;
+  --accent: 200 18% 88%;
+  --accent-foreground: 215 25% 15%;
+  --destructive: 0 72% 42%;
+  --destructive-foreground: 0 85% 98%;
+  --input: 200 20% 72%;
+  --ring: 215 90% 45%;
+  --chart-1: 215 90% 45%;
+  --chart-2: 200 80% 42%;
+  --chart-3: 190 70% 38%;
+  --chart-4: 180 65% 35%;
+  --chart-5: 170 60% 32%;
+  --font-sans: 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-serif: Georgia, serif;
+  --font-mono: 'IBM Plex Mono', Menlo, monospace;
+  --radius: .5rem;
+  --shadow-2xs: 0px 2px 0px 0px hsl(215 20% 20% / 0.00);
+  --shadow-xs: 0px 2px 0px 0px hsl(215 20% 20% / 0.00);
+  --shadow-sm: 0px 2px 0px 0px hsl(215 20% 20% / 0.00), 0px 1px 2px -1px hsl(215 20% 20% / 0.00);
+  --shadow: 0px 2px 0px 0px hsl(215 20% 20% / 0.00), 0px 1px 2px -1px hsl(215 20% 20% / 0.00);
+  --shadow-md: 0px 2px 0px 0px hsl(215 20% 20% / 0.00), 0px 2px 4px -1px hsl(215 20% 20% / 0.00);
+  --shadow-lg: 0px 2px 0px 0px hsl(215 20% 20% / 0.00), 0px 4px 6px -1px hsl(215 20% 20% / 0.00);
+  --shadow-xl: 0px 2px 0px 0px hsl(215 20% 20% / 0.00), 0px 8px 10px -1px hsl(215 20% 20% / 0.00);
+  --shadow-2xl: 0px 2px 0px 0px hsl(215 20% 20% / 0.00);
+  --tracking-normal: 0em;
+  --spacing: 0.25rem;
+  --sidebar-primary-border: hsl(var(--sidebar-primary));
+  --sidebar-accent-border: hsl(var(--sidebar-accent));
+  --primary-border: hsl(var(--primary));
+  --secondary-border: hsl(var(--secondary));
+  --muted-border: hsl(var(--muted));
+  --accent-border: hsl(var(--accent));
+  --destructive-border: hsl(var(--destructive));
+}
+
+/* OCEAN BLUE - Dark Mode */
+.dark[data-color-scheme="ocean"] {
+  --button-outline: rgba(255,255,255, .10);
+  --badge-outline: rgba(255,255,255, .05);
+  --opaque-button-border-intensity: 9;
+  --elevate-1: rgba(255,255,255, .04);
+  --elevate-2: rgba(255,255,255, .09);
+  --background: 215 30% 8%;
+  --foreground: 200 20% 96%;
+  --border: 215 25% 16%;
+  --card: 215 28% 10%;
+  --card-foreground: 200 20% 96%;
+  --card-border: 215 22% 13%;
+  --sidebar: 215 28% 12%;
+  --sidebar-foreground: 200 20% 96%;
+  --sidebar-border: 215 22% 15%;
+  --sidebar-primary: 215 90% 52%;
+  --sidebar-primary-foreground: 215 95% 98%;
+  --sidebar-accent: 215 20% 16%;
+  --sidebar-accent-foreground: 200 20% 96%;
+  --sidebar-ring: 215 90% 52%;
+  --popover: 215 28% 14%;
+  --popover-foreground: 200 20% 96%;
+  --popover-border: 215 22% 17%;
+  --primary: 215 90% 48%;
+  --primary-foreground: 215 95% 98%;
+  --secondary: 215 18% 18%;
+  --secondary-foreground: 200 20% 96%;
+  --muted: 215 18% 16%;
+  --muted-foreground: 200 16% 70%;
+  --accent: 215 20% 14%;
+  --accent-foreground: 200 20% 96%;
+  --destructive: 0 72% 38%;
+  --destructive-foreground: 0 85% 98%;
+  --input: 215 20% 28%;
+  --ring: 215 90% 52%;
+  --chart-1: 215 90% 68%;
+  --chart-2: 200 80% 62%;
+  --chart-3: 190 75% 58%;
+  --chart-4: 180 70% 55%;
+  --chart-5: 170 65% 52%;
+  --shadow-2xs: 0px 2px 0px 0px hsl(215 20% 5% / 0.00);
+  --shadow-xs: 0px 2px 0px 0px hsl(215 20% 5% / 0.00);
+  --shadow-sm: 0px 2px 0px 0px hsl(215 20% 5% / 0.00), 0px 1px 2px -1px hsl(215 20% 5% / 0.00);
+  --shadow: 0px 2px 0px 0px hsl(215 20% 5% / 0.00), 0px 1px 2px -1px hsl(215 20% 5% / 0.00);
+  --shadow-md: 0px 2px 0px 0px hsl(215 20% 5% / 0.00), 0px 2px 4px -1px hsl(215 20% 5% / 0.00);
+  --shadow-lg: 0px 2px 0px 0px hsl(215 20% 5% / 0.00), 0px 4px 6px -1px hsl(215 20% 5% / 0.00);
+  --shadow-xl: 0px 2px 0px 0px hsl(215 20% 5% / 0.00), 0px 8px 10px -1px hsl(215 20% 5% / 0.00);
+  --shadow-2xl: 0px 2px 0px 0px hsl(215 20% 5% / 0.00);
+  --sidebar-primary-border: hsl(var(--sidebar-primary));
+  --sidebar-accent-border: hsl(var(--sidebar-accent));
+  --primary-border: hsl(var(--primary));
+  --secondary-border: hsl(var(--secondary));
+  --muted-border: hsl(var(--muted));
+  --accent-border: hsl(var(--accent));
+  --destructive-border: hsl(var(--destructive));
+}
+
+/* ========================================
+   SKY BLUE - Light, vibrant blue tones
+   ======================================== */
+
+/* SKY BLUE - Light Mode */
+:root[data-color-scheme="sky"] {
+  --button-outline: rgba(0,0,0, .10);
+  --badge-outline: rgba(0,0,0, .05);
+  --opaque-button-border-intensity: -8;
+  --elevate-1: rgba(0,0,0, .03);
+  --elevate-2: rgba(0,0,0, .08);
+  --background: 195 30% 98%;
+  --foreground: 200 22% 12%;
+  --border: 195 22% 91%;
+  --card: 195 28% 96%;
+  --card-foreground: 200 22% 12%;
+  --card-border: 195 20% 93%;
+  --sidebar: 195 24% 93%;
+  --sidebar-foreground: 200 22% 12%;
+  --sidebar-border: 195 18% 89%;
+  --sidebar-primary: 195 85% 48%;
+  --sidebar-primary-foreground: 195 90% 98%;
+  --sidebar-accent: 195 20% 86%;
+  --sidebar-accent-foreground: 200 22% 15%;
+  --sidebar-ring: 195 85% 48%;
+  --popover: 195 26% 91%;
+  --popover-foreground: 200 22% 12%;
+  --popover-border: 195 18% 87%;
+  --primary: 195 85% 48%;
+  --primary-foreground: 195 90% 98%;
+  --secondary: 195 18% 85%;
+  --secondary-foreground: 200 22% 15%;
+  --muted: 195 18% 87%;
+  --muted-foreground: 195 16% 38%;
+  --accent: 195 20% 89%;
+  --accent-foreground: 200 22% 15%;
+  --destructive: 0 72% 42%;
+  --destructive-foreground: 0 85% 98%;
+  --input: 195 22% 74%;
+  --ring: 195 85% 48%;
+  --chart-1: 195 85% 48%;
+  --chart-2: 185 75% 44%;
+  --chart-3: 175 70% 40%;
+  --chart-4: 165 65% 36%;
+  --chart-5: 155 60% 32%;
+  --font-sans: 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-serif: Georgia, serif;
+  --font-mono: 'IBM Plex Mono', Menlo, monospace;
+  --radius: .5rem;
+  --shadow-2xs: 0px 2px 0px 0px hsl(195 18% 20% / 0.00);
+  --shadow-xs: 0px 2px 0px 0px hsl(195 18% 20% / 0.00);
+  --shadow-sm: 0px 2px 0px 0px hsl(195 18% 20% / 0.00), 0px 1px 2px -1px hsl(195 18% 20% / 0.00);
+  --shadow: 0px 2px 0px 0px hsl(195 18% 20% / 0.00), 0px 1px 2px -1px hsl(195 18% 20% / 0.00);
+  --shadow-md: 0px 2px 0px 0px hsl(195 18% 20% / 0.00), 0px 2px 4px -1px hsl(195 18% 20% / 0.00);
+  --shadow-lg: 0px 2px 0px 0px hsl(195 18% 20% / 0.00), 0px 4px 6px -1px hsl(195 18% 20% / 0.00);
+  --shadow-xl: 0px 2px 0px 0px hsl(195 18% 20% / 0.00), 0px 8px 10px -1px hsl(195 18% 20% / 0.00);
+  --shadow-2xl: 0px 2px 0px 0px hsl(195 18% 20% / 0.00);
+  --tracking-normal: 0em;
+  --spacing: 0.25rem;
+  --sidebar-primary-border: hsl(var(--sidebar-primary));
+  --sidebar-accent-border: hsl(var(--sidebar-accent));
+  --primary-border: hsl(var(--primary));
+  --secondary-border: hsl(var(--secondary));
+  --muted-border: hsl(var(--muted));
+  --accent-border: hsl(var(--accent));
+  --destructive-border: hsl(var(--destructive));
+}
+
+/* SKY BLUE - Dark Mode */
+.dark[data-color-scheme="sky"] {
+  --button-outline: rgba(255,255,255, .10);
+  --badge-outline: rgba(255,255,255, .05);
+  --opaque-button-border-intensity: 9;
+  --elevate-1: rgba(255,255,255, .04);
+  --elevate-2: rgba(255,255,255, .09);
+  --background: 200 25% 7%;
+  --foreground: 195 22% 96%;
+  --border: 200 20% 15%;
+  --card: 200 24% 9%;
+  --card-foreground: 195 22% 96%;
+  --card-border: 200 18% 12%;
+  --sidebar: 200 24% 11%;
+  --sidebar-foreground: 195 22% 96%;
+  --sidebar-border: 200 18% 14%;
+  --sidebar-primary: 195 85% 52%;
+  --sidebar-primary-foreground: 195 90% 98%;
+  --sidebar-accent: 200 18% 15%;
+  --sidebar-accent-foreground: 195 22% 96%;
+  --sidebar-ring: 195 85% 52%;
+  --popover: 200 24% 13%;
+  --popover-foreground: 195 22% 96%;
+  --popover-border: 200 18% 16%;
+  --primary: 195 85% 48%;
+  --primary-foreground: 195 90% 98%;
+  --secondary: 200 16% 17%;
+  --secondary-foreground: 195 22% 96%;
+  --muted: 200 16% 15%;
+  --muted-foreground: 195 14% 68%;
+  --accent: 200 18% 13%;
+  --accent-foreground: 195 22% 96%;
+  --destructive: 0 72% 38%;
+  --destructive-foreground: 0 85% 98%;
+  --input: 200 18% 26%;
+  --ring: 195 85% 52%;
+  --chart-1: 195 85% 65%;
+  --chart-2: 185 80% 60%;
+  --chart-3: 175 75% 55%;
+  --chart-4: 165 70% 50%;
+  --chart-5: 155 65% 48%;
+  --shadow-2xs: 0px 2px 0px 0px hsl(200 18% 5% / 0.00);
+  --shadow-xs: 0px 2px 0px 0px hsl(200 18% 5% / 0.00);
+  --shadow-sm: 0px 2px 0px 0px hsl(200 18% 5% / 0.00), 0px 1px 2px -1px hsl(200 18% 5% / 0.00);
+  --shadow: 0px 2px 0px 0px hsl(200 18% 5% / 0.00), 0px 1px 2px -1px hsl(200 18% 5% / 0.00);
+  --shadow-md: 0px 2px 0px 0px hsl(200 18% 5% / 0.00), 0px 2px 4px -1px hsl(200 18% 5% / 0.00);
+  --shadow-lg: 0px 2px 0px 0px hsl(200 18% 5% / 0.00), 0px 4px 6px -1px hsl(200 18% 5% / 0.00);
+  --shadow-xl: 0px 2px 0px 0px hsl(200 18% 5% / 0.00), 0px 8px 10px -1px hsl(200 18% 5% / 0.00);
+  --shadow-2xl: 0px 2px 0px 0px hsl(200 18% 5% / 0.00);
+  --sidebar-primary-border: hsl(var(--sidebar-primary));
+  --sidebar-accent-border: hsl(var(--sidebar-accent));
+  --primary-border: hsl(var(--primary));
+  --secondary-border: hsl(var(--secondary));
+  --muted-border: hsl(var(--muted));
+  --accent-border: hsl(var(--accent));
+  --destructive-border: hsl(var(--destructive));
+}
+
+/* ========================================
+   NAVY BLUE - Deep, professional navy tones
+   ======================================== */
+
+/* NAVY BLUE - Light Mode */
+:root[data-color-scheme="navy"] {
+  --button-outline: rgba(0,0,0, .10);
+  --badge-outline: rgba(0,0,0, .05);
+  --opaque-button-border-intensity: -8;
+  --elevate-1: rgba(0,0,0, .03);
+  --elevate-2: rgba(0,0,0, .08);
+  --background: 220 20% 97%;
+  --foreground: 225 30% 12%;
+  --border: 220 18% 90%;
+  --card: 220 22% 95%;
+  --card-foreground: 225 30% 12%;
+  --card-border: 220 16% 92%;
+  --sidebar: 220 18% 92%;
+  --sidebar-foreground: 225 30% 12%;
+  --sidebar-border: 220 14% 88%;
+  --sidebar-primary: 225 75% 38%;
+  --sidebar-primary-foreground: 225 85% 98%;
+  --sidebar-accent: 220 16% 85%;
+  --sidebar-accent-foreground: 225 30% 15%;
+  --sidebar-ring: 225 75% 38%;
+  --popover: 220 20% 90%;
+  --popover-foreground: 225 30% 12%;
+  --popover-border: 220 14% 86%;
+  --primary: 225 75% 38%;
+  --primary-foreground: 225 85% 98%;
+  --secondary: 220 14% 83%;
+  --secondary-foreground: 225 30% 15%;
+  --muted: 220 14% 85%;
+  --muted-foreground: 220 16% 38%;
+  --accent: 220 16% 87%;
+  --accent-foreground: 225 30% 15%;
+  --destructive: 0 72% 42%;
+  --destructive-foreground: 0 85% 98%;
+  --input: 220 18% 72%;
+  --ring: 225 75% 38%;
+  --chart-1: 225 75% 45%;
+  --chart-2: 215 70% 42%;
+  --chart-3: 205 65% 38%;
+  --chart-4: 195 60% 35%;
+  --chart-5: 185 55% 32%;
+  --font-sans: 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-serif: Georgia, serif;
+  --font-mono: 'IBM Plex Mono', Menlo, monospace;
+  --radius: .5rem;
+  --shadow-2xs: 0px 2px 0px 0px hsl(225 20% 20% / 0.00);
+  --shadow-xs: 0px 2px 0px 0px hsl(225 20% 20% / 0.00);
+  --shadow-sm: 0px 2px 0px 0px hsl(225 20% 20% / 0.00), 0px 1px 2px -1px hsl(225 20% 20% / 0.00);
+  --shadow: 0px 2px 0px 0px hsl(225 20% 20% / 0.00), 0px 1px 2px -1px hsl(225 20% 20% / 0.00);
+  --shadow-md: 0px 2px 0px 0px hsl(225 20% 20% / 0.00), 0px 2px 4px -1px hsl(225 20% 20% / 0.00);
+  --shadow-lg: 0px 2px 0px 0px hsl(225 20% 20% / 0.00), 0px 4px 6px -1px hsl(225 20% 20% / 0.00);
+  --shadow-xl: 0px 2px 0px 0px hsl(225 20% 20% / 0.00), 0px 8px 10px -1px hsl(225 20% 20% / 0.00);
+  --shadow-2xl: 0px 2px 0px 0px hsl(225 20% 20% / 0.00);
+  --tracking-normal: 0em;
+  --spacing: 0.25rem;
+  --sidebar-primary-border: hsl(var(--sidebar-primary));
+  --sidebar-accent-border: hsl(var(--sidebar-accent));
+  --primary-border: hsl(var(--primary));
+  --secondary-border: hsl(var(--secondary));
+  --muted-border: hsl(var(--muted));
+  --accent-border: hsl(var(--accent));
+  --destructive-border: hsl(var(--destructive));
+}
+
+/* NAVY BLUE - Dark Mode */
+.dark[data-color-scheme="navy"] {
+  --button-outline: rgba(255,255,255, .10);
+  --badge-outline: rgba(255,255,255, .05);
+  --opaque-button-border-intensity: 9;
+  --elevate-1: rgba(255,255,255, .04);
+  --elevate-2: rgba(255,255,255, .09);
+  --background: 225 35% 6%;
+  --foreground: 220 18% 96%;
+  --border: 225 28% 14%;
+  --card: 225 32% 8%;
+  --card-foreground: 220 18% 96%;
+  --card-border: 225 25% 11%;
+  --sidebar: 225 32% 10%;
+  --sidebar-foreground: 220 18% 96%;
+  --sidebar-border: 225 25% 13%;
+  --sidebar-primary: 225 80% 52%;
+  --sidebar-primary-foreground: 225 85% 98%;
+  --sidebar-accent: 225 22% 14%;
+  --sidebar-accent-foreground: 220 18% 96%;
+  --sidebar-ring: 225 80% 52%;
+  --popover: 225 32% 12%;
+  --popover-foreground: 220 18% 96%;
+  --popover-border: 225 25% 15%;
+  --primary: 225 75% 45%;
+  --primary-foreground: 225 85% 98%;
+  --secondary: 225 20% 16%;
+  --secondary-foreground: 220 18% 96%;
+  --muted: 225 20% 14%;
+  --muted-foreground: 220 14% 68%;
+  --accent: 225 22% 12%;
+  --accent-foreground: 220 18% 96%;
+  --destructive: 0 72% 38%;
+  --destructive-foreground: 0 85% 98%;
+  --input: 225 22% 26%;
+  --ring: 225 80% 52%;
+  --chart-1: 225 80% 65%;
+  --chart-2: 215 75% 60%;
+  --chart-3: 205 70% 55%;
+  --chart-4: 195 65% 52%;
+  --chart-5: 185 60% 48%;
+  --shadow-2xs: 0px 2px 0px 0px hsl(225 20% 4% / 0.00);
+  --shadow-xs: 0px 2px 0px 0px hsl(225 20% 4% / 0.00);
+  --shadow-sm: 0px 2px 0px 0px hsl(225 20% 4% / 0.00), 0px 1px 2px -1px hsl(225 20% 4% / 0.00);
+  --shadow: 0px 2px 0px 0px hsl(225 20% 4% / 0.00), 0px 1px 2px -1px hsl(225 20% 4% / 0.00);
+  --shadow-md: 0px 2px 0px 0px hsl(225 20% 4% / 0.00), 0px 2px 4px -1px hsl(225 20% 4% / 0.00);
+  --shadow-lg: 0px 2px 0px 0px hsl(225 20% 4% / 0.00), 0px 4px 6px -1px hsl(225 20% 4% / 0.00);
+  --shadow-xl: 0px 2px 0px 0px hsl(225 20% 4% / 0.00), 0px 8px 10px -1px hsl(225 20% 4% / 0.00);
+  --shadow-2xl: 0px 2px 0px 0px hsl(225 20% 4% / 0.00);
+  --sidebar-primary-border: hsl(var(--sidebar-primary));
+  --sidebar-accent-border: hsl(var(--sidebar-accent));
+  --primary-border: hsl(var(--primary));
+  --secondary-border: hsl(var(--secondary));
+  --muted-border: hsl(var(--muted));
+  --accent-border: hsl(var(--accent));
+  --destructive-border: hsl(var(--destructive));
 }
 
 @layer base {

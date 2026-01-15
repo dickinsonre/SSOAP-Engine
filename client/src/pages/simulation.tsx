@@ -12,7 +12,9 @@ import {
   Download,
   Trash2,
   RefreshCw,
+  FileSpreadsheet,
 } from "lucide-react";
+import { ICMImportDialog } from "@/components/icm-import-dialog";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -499,6 +501,7 @@ export default function SimulationPage() {
           <Badge variant="outline" className="font-mono">
             SWMM 5.1 WASM
           </Badge>
+          <ICMImportDialog />
           <Select value={selectedProject} onValueChange={setSelectedProject}>
             <SelectTrigger className="w-[200px]" data-testid="select-project">
               <SelectValue placeholder="Select project" />
