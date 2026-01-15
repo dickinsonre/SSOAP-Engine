@@ -15,6 +15,7 @@ import Dashboard from "@/pages/dashboard";
 import Projects from "@/pages/projects";
 import SimulationPage from "@/pages/simulation";
 import RDIIAnalysisPage from "@/pages/rdii-analysis";
+import DWFAnalysisPage from "@/pages/dwf-analysis";
 import HydrographPage from "@/pages/hydrograph";
 import ConditionAssessmentPage from "@/pages/condition-assessment";
 import SSOEventsPage from "@/pages/sso-events";
@@ -29,6 +30,7 @@ function Router() {
       <Route path="/projects" component={Projects} />
       <Route path="/simulation" component={SimulationPage} />
       <Route path="/rdii-analysis" component={RDIIAnalysisPage} />
+      <Route path="/dwf-analysis" component={DWFAnalysisPage} />
       <Route path="/hydrograph" component={HydrographPage} />
       <Route path="/condition-assessment" component={ConditionAssessmentPage} />
       <Route path="/sso-events" component={SSOEventsPage} />

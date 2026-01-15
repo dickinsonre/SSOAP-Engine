@@ -520,6 +520,65 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     }
   });
 
+  // DWF Patterns
+  app.get("/api/dwf-patterns", async (req, res) => {
+    try {
+      const projectId = req.query.projectId as string;
+      if (!projectId) {
+        return res.status(400).json({ error: "Project ID required" });
+      }
+      const patterns = await storage.getDWFPatterns(projectId);
+      res.json(patterns);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to get DWF patterns" });
+    }
+  });
+
+  app.get("/api/dwf-patterns/:id", async (req, res) => {
+    try {
+      const pattern = await storage.getDWFPattern(req.params.id);
+      if (!pattern) {
+        return res.status(404).json({ error: "DWF pattern not found" });
+      }
+      res.json(pattern);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to get DWF pattern" });
+    }
+  });
+
+  app.post("/api/dwf-patterns", async (req, res) => {
+    try {
+      const pattern = await storage.createDWFPattern(req.body);
+      res.status(201).json(pattern);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to create DWF pattern" });
+    }
+  });
+
+  app.patch("/api/dwf-patterns/:id", async (req, res) => {
+    try {
+      const pattern = await storage.updateDWFPattern(req.params.id, req.body);
+      if (!pattern) {
+        return res.status(404).json({ error: "DWF pattern not found" });
+      }
+      res.json(pattern);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to update DWF pattern" });
+    }
+  });
+
+  app.delete("/api/dwf-patterns/:id", async (req, res) => {
+    try {
+      const deleted = await storage.deleteDWFPattern(req.params.id);
+      if (!deleted) {
+        return res.status(404).json({ error: "DWF pattern not found" });
+      }
+      res.status(204).send();
+    } catch (error) {
+      res.status(500).json({ error: "Failed to delete DWF pattern" });
+    }
+  });
+
   // Hydrographs
   app.get("/api/hydrographs", async (req, res) => {
     try {

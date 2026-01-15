@@ -232,6 +232,46 @@ export interface SSOEvent {
   severity: "minor" | "moderate" | "major";
 }
 
+// DWF (Dry Weather Flow) Pattern
+export interface DWFPattern {
+  id: string;
+  projectId: string;
+  sewershedId: string;
+  sewershedName: string;
+  // Mean flow statistics
+  meanFlow: number; // MGD or cfs
+  minFlow: number;
+  maxFlow: number;
+  standardDeviation: number;
+  // 24-hour weekday pattern (hourly multipliers, 0-23)
+  weekdayPattern: number[];
+  // 24-hour weekend pattern (hourly multipliers, 0-23)
+  weekendPattern: number[];
+  // Groundwater infiltration
+  groundwaterFlow: number; // base infiltration rate
+  // Analysis metadata
+  analysisStartDate: string;
+  analysisEndDate: string;
+  dryDaysCount: number;
+  createdAt: string;
+}
+
+export interface InsertDWFPattern {
+  projectId: string;
+  sewershedId: string;
+  sewershedName: string;
+  meanFlow: number;
+  minFlow?: number;
+  maxFlow?: number;
+  standardDeviation?: number;
+  weekdayPattern: number[];
+  weekendPattern: number[];
+  groundwaterFlow?: number;
+  analysisStartDate?: string;
+  analysisEndDate?: string;
+  dryDaysCount?: number;
+}
+
 export interface InsertSSOEvent {
   projectId: string;
   location: string;

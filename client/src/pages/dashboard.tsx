@@ -458,7 +458,7 @@ function LoadingSkeleton() {
   );
 }
 
-function WelcomeHero({ onImportClick }: { onImportClick: () => void }) {
+function WelcomeHero({ onImportClick, onICMImportClick }: { onImportClick: () => void; onICMImportClick?: () => void }) {
   return (
     <div className="relative overflow-hidden rounded-xl bg-gradient-to-br from-primary/10 via-primary/5 to-transparent border p-6">
       <div className="absolute top-0 right-0 w-64 h-64 bg-primary/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
@@ -474,6 +474,10 @@ function WelcomeHero({ onImportClick }: { onImportClick: () => void }) {
             <Button onClick={onImportClick} size="lg" data-testid="button-import-swmm">
               <Upload className="mr-2 h-4 w-4" />
               Import SWMM Model
+            </Button>
+            <Button onClick={onICMImportClick} variant="outline" size="lg" className="bg-emerald-500/10 border-emerald-500/30 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-500/20" data-testid="button-import-icm">
+              <FileSpreadsheet className="mr-2 h-4 w-4" />
+              Import from ICM
             </Button>
             <Link href="/projects">
               <Button variant="outline" size="lg" data-testid="button-new-project">
@@ -518,6 +522,7 @@ function EmptyState({ onImportClick }: { onImportClick: () => void }) {
 
 export default function Dashboard() {
   const [importDialogOpen, setImportDialogOpen] = useState(false);
+  const [icmImportDialogOpen, setIcmImportDialogOpen] = useState(false);
 
   const { data: stats, isLoading: statsLoading } = useQuery<DashboardStats>({
     queryKey: ["/api/dashboard/stats"],
@@ -563,12 +568,16 @@ export default function Dashboard() {
       </div>
 
       <ImportSWMMDialog open={importDialogOpen} onOpenChange={setImportDialogOpen} projects={projects} />
+      <ICMImportDialog open={icmImportDialogOpen} onOpenChange={setIcmImportDialogOpen} />
 
       {!hasProjects ? (
         <EmptyState onImportClick={() => setImportDialogOpen(true)} />
       ) : (
         <>
-          <WelcomeHero onImportClick={() => setImportDialogOpen(true)} />
+          <WelcomeHero 
+            onImportClick={() => setImportDialogOpen(true)} 
+            onICMImportClick={() => setIcmImportDialogOpen(true)} 
+          />
 
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
             <StatCard
@@ -606,23 +615,6 @@ export default function Dashboard() {
           </div>
 
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-            <ICMImportDialog
-              trigger={
-                <div className="h-full">
-                  <Card className="hover-elevate cursor-pointer h-full transition-all">
-                    <CardContent className="flex items-center gap-4 p-4">
-                      <div className="flex h-12 w-12 items-center justify-center rounded-xl shrink-0 bg-emerald-500 text-white">
-                        <FileSpreadsheet className="h-6 w-6" />
-                      </div>
-                      <div className="min-w-0">
-                        <h3 className="font-medium text-sm">Import from ICM</h3>
-                        <p className="text-xs text-muted-foreground truncate">InfoWorks CSV data</p>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </div>
-              }
-            />
             <QuickActionCard
               title="Run Simulation"
               description="Execute SWMM5 analysis"
@@ -636,6 +628,12 @@ export default function Dashboard() {
               icon={Waves}
               href="/rdii-analysis"
               variant="accent"
+            />
+            <QuickActionCard
+              title="DWF Analysis"
+              description="Dry weather flow & GWI"
+              icon={Droplets}
+              href="/dwf-analysis"
             />
             <QuickActionCard
               title="View Hydrographs"

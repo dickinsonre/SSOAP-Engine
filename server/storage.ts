@@ -16,6 +16,8 @@ import type {
   InsertSSOEvent,
   RainfallData,
   SimulationOutput,
+  DWFPattern,
+  InsertDWFPattern,
 } from "@shared/schema";
 
 export interface IStorage {
@@ -69,6 +71,14 @@ export interface IStorage {
   // Rainfall Data
   getRainfallData(projectId: string): Promise<RainfallData | undefined>;
 
+  // DWF Patterns
+  getDWFPatterns(projectId: string): Promise<DWFPattern[]>;
+  getDWFPattern(id: string): Promise<DWFPattern | undefined>;
+  getDWFPatternBySewershed(projectId: string, sewershedId: string): Promise<DWFPattern | undefined>;
+  createDWFPattern(pattern: InsertDWFPattern): Promise<DWFPattern>;
+  updateDWFPattern(id: string, updates: Partial<InsertDWFPattern>): Promise<DWFPattern | undefined>;
+  deleteDWFPattern(id: string): Promise<boolean>;
+
   // Dashboard Stats
   getDashboardStats(): Promise<{
     totalProjects: number;
@@ -87,6 +97,7 @@ export class MemStorage implements IStorage {
   private conditionAssessments: Map<string, ConditionAssessment>;
   private ssoEvents: Map<string, SSOEvent>;
   private rainfallData: Map<string, RainfallData>;
+  private dwfPatterns: Map<string, DWFPattern>;
 
   constructor() {
     this.users = new Map();
@@ -97,6 +108,7 @@ export class MemStorage implements IStorage {
     this.conditionAssessments = new Map();
     this.ssoEvents = new Map();
     this.rainfallData = new Map();
+    this.dwfPatterns = new Map();
 
     this.seedDemoData();
   }
@@ -428,6 +440,77 @@ export class MemStorage implements IStorage {
     });
 
     this.rainfallData.set("proj-1", rainfall);
+
+    const weekdayPatternTypical = [
+      0.65, 0.55, 0.50, 0.48, 0.55, 0.75,
+      1.10, 1.45, 1.35, 1.15, 1.05, 1.00,
+      1.00, 0.95, 0.90, 0.95, 1.05, 1.25,
+      1.35, 1.25, 1.10, 0.95, 0.85, 0.75
+    ];
+    const weekendPatternTypical = [
+      0.60, 0.50, 0.45, 0.42, 0.45, 0.55,
+      0.70, 0.90, 1.10, 1.25, 1.30, 1.25,
+      1.20, 1.15, 1.10, 1.05, 1.10, 1.15,
+      1.20, 1.15, 1.05, 0.90, 0.80, 0.70
+    ];
+
+    const dwf1: DWFPattern = {
+      id: "dwf-1",
+      projectId: "proj-1",
+      sewershedId: "ss-1",
+      sewershedName: "Downtown Core",
+      meanFlow: 2.45,
+      minFlow: 0.98,
+      maxFlow: 4.41,
+      standardDeviation: 0.37,
+      weekdayPattern: weekdayPatternTypical,
+      weekendPattern: weekendPatternTypical,
+      groundwaterFlow: 0.25,
+      analysisStartDate: "2024-01-01T00:00:00Z",
+      analysisEndDate: "2024-03-15T00:00:00Z",
+      dryDaysCount: 21,
+      createdAt: now,
+    };
+
+    const dwf2: DWFPattern = {
+      id: "dwf-2",
+      projectId: "proj-1",
+      sewershedId: "ss-2",
+      sewershedName: "Commercial District",
+      meanFlow: 1.85,
+      minFlow: 0.74,
+      maxFlow: 3.33,
+      standardDeviation: 0.28,
+      weekdayPattern: weekdayPatternTypical.map(v => v * 1.1),
+      weekendPattern: weekendPatternTypical.map(v => v * 0.7),
+      groundwaterFlow: 0.18,
+      analysisStartDate: "2024-01-01T00:00:00Z",
+      analysisEndDate: "2024-03-15T00:00:00Z",
+      dryDaysCount: 21,
+      createdAt: now,
+    };
+
+    const dwf3: DWFPattern = {
+      id: "dwf-3",
+      projectId: "proj-1",
+      sewershedId: "ss-3",
+      sewershedName: "Residential North",
+      meanFlow: 3.20,
+      minFlow: 1.28,
+      maxFlow: 5.76,
+      standardDeviation: 0.48,
+      weekdayPattern: weekdayPatternTypical.map(v => v * 0.95),
+      weekendPattern: weekendPatternTypical.map(v => v * 1.05),
+      groundwaterFlow: 0.32,
+      analysisStartDate: "2024-01-01T00:00:00Z",
+      analysisEndDate: "2024-03-15T00:00:00Z",
+      dryDaysCount: 21,
+      createdAt: now,
+    };
+
+    this.dwfPatterns.set(dwf1.id, dwf1);
+    this.dwfPatterns.set(dwf2.id, dwf2);
+    this.dwfPatterns.set(dwf3.id, dwf3);
   }
 
   // Users
@@ -697,6 +780,57 @@ export class MemStorage implements IStorage {
   // Rainfall Data
   async getRainfallData(projectId: string): Promise<RainfallData | undefined> {
     return this.rainfallData.get(projectId);
+  }
+
+  // DWF Patterns
+  async getDWFPatterns(projectId: string): Promise<DWFPattern[]> {
+    return Array.from(this.dwfPatterns.values())
+      .filter((p) => p.projectId === projectId);
+  }
+
+  async getDWFPattern(id: string): Promise<DWFPattern | undefined> {
+    return this.dwfPatterns.get(id);
+  }
+
+  async getDWFPatternBySewershed(projectId: string, sewershedId: string): Promise<DWFPattern | undefined> {
+    return Array.from(this.dwfPatterns.values())
+      .find((p) => p.projectId === projectId && p.sewershedId === sewershedId);
+  }
+
+  async createDWFPattern(insert: InsertDWFPattern): Promise<DWFPattern> {
+    const id = randomUUID();
+    const now = new Date().toISOString();
+    const pattern: DWFPattern = {
+      id,
+      projectId: insert.projectId,
+      sewershedId: insert.sewershedId,
+      sewershedName: insert.sewershedName,
+      meanFlow: insert.meanFlow,
+      minFlow: insert.minFlow ?? insert.meanFlow * 0.4,
+      maxFlow: insert.maxFlow ?? insert.meanFlow * 1.8,
+      standardDeviation: insert.standardDeviation ?? insert.meanFlow * 0.15,
+      weekdayPattern: insert.weekdayPattern,
+      weekendPattern: insert.weekendPattern,
+      groundwaterFlow: insert.groundwaterFlow ?? insert.meanFlow * 0.1,
+      analysisStartDate: insert.analysisStartDate ?? now,
+      analysisEndDate: insert.analysisEndDate ?? now,
+      dryDaysCount: insert.dryDaysCount ?? 14,
+      createdAt: now,
+    };
+    this.dwfPatterns.set(id, pattern);
+    return pattern;
+  }
+
+  async updateDWFPattern(id: string, updates: Partial<InsertDWFPattern>): Promise<DWFPattern | undefined> {
+    const pattern = this.dwfPatterns.get(id);
+    if (!pattern) return undefined;
+    const updated = { ...pattern, ...updates };
+    this.dwfPatterns.set(id, updated);
+    return updated;
+  }
+
+  async deleteDWFPattern(id: string): Promise<boolean> {
+    return this.dwfPatterns.delete(id);
   }
 
   // Dashboard Stats

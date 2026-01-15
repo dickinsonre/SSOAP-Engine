@@ -10,6 +10,7 @@ import {
   Droplets,
   AlertTriangle,
   FileText,
+  Waves,
 } from "lucide-react";
 import {
   Sidebar,
@@ -50,6 +51,11 @@ const analysisTools = [
     title: "RDII Analysis",
     url: "/rdii-analysis",
     icon: Activity,
+  },
+  {
+    title: "DWF Analysis",
+    url: "/dwf-analysis",
+    icon: Waves,
   },
   {
     title: "Hydrograph",

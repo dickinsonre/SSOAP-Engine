@@ -65,8 +65,16 @@ interface ImportResponse {
   totalRecords: number;
 }
 
-export function ICMImportDialog({ trigger }: { trigger?: React.ReactNode }) {
-  const [open, setOpen] = useState(false);
+interface ICMImportDialogProps {
+  trigger?: React.ReactNode;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+}
+
+export function ICMImportDialog({ trigger, open: controlledOpen, onOpenChange }: ICMImportDialogProps) {
+  const [internalOpen, setInternalOpen] = useState(false);
+  const open = controlledOpen !== undefined ? controlledOpen : internalOpen;
+  const setOpen = onOpenChange || setInternalOpen;
   const [selectedProject, setSelectedProject] = useState<string>("");
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [isDragging, setIsDragging] = useState(false);
@@ -154,16 +162,20 @@ export function ICMImportDialog({ trigger }: { trigger?: React.ReactNode }) {
     }
   };
 
+  const isControlled = controlledOpen !== undefined;
+
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        {trigger || (
-          <Button variant="outline" data-testid="button-icm-import">
-            <FileSpreadsheet className="mr-2 h-4 w-4" />
-            Import from ICM
-          </Button>
-        )}
-      </DialogTrigger>
+      {!isControlled && (
+        <DialogTrigger asChild>
+          {trigger || (
+            <Button variant="outline" data-testid="button-icm-import">
+              <FileSpreadsheet className="mr-2 h-4 w-4" />
+              Import from ICM
+            </Button>
+          )}
+        </DialogTrigger>
+      )}
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">

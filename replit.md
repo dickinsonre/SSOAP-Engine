@@ -36,6 +36,7 @@ Preferred communication style: Simple, everyday language.
 - **Projects**: Container for sewer analysis projects with sewershed metadata
 - **Simulations**: SWMM5 simulation runs with input files and output results
 - **RDII Parameters**: RTK parameters for rainfall-derived infiltration analysis
+- **DWF Patterns**: Dry Weather Flow patterns with hourly multipliers (weekday/weekend) and GWI
 - **Hydrographs**: Flow data for sewershed analysis
 - **Condition Assessments**: Pipe condition evaluations
 - **SSO Events**: Sanitary sewer overflow incident tracking
@@ -44,7 +45,8 @@ Preferred communication style: Simple, everyday language.
 - Dashboard: Overview statistics and recent activity
 - Projects: Project management CRUD operations
 - Simulation: SWMM5 file upload and simulation execution
-- RDII Analysis: Rainfall-derived infiltration parameter management
+- RDII Analysis: Rainfall-derived infiltration parameter management with GA calibration
+- DWF Analysis: Dry Weather Flow patterns, mean flow statistics, weekday/weekend patterns, and groundwater infiltration (GWI) metrics
 - Hydrograph: Flow visualization with Recharts
 - Condition Assessment: Pipe condition tracking
 - SSO Events: Overflow event logging and analysis
@@ -84,6 +86,7 @@ The application includes seeded demo data for immediate testing:
 - 2 projects: "Downtown Sewer Analysis" (proj-1), "Northside Rehabilitation" (proj-2)
 - 2 simulations for proj-1: "Baseline Simulation" (completed), "Storm Event Analysis" (running)
 - 3 RDII parameter sets: Downtown Core, Commercial District, Residential North
+- 3 DWF patterns with weekday/weekend multipliers and GWI for Downtown Core, Commercial District, Residential North
 - 2 condition assessments with pre/post rehabilitation data
 - 3 SSO events with varying severity levels
 
