@@ -71,3 +71,31 @@ Preferred communication style: Simple, everyday language.
 
 ### File Processing
 - **Multer**: Server-side file upload handling for SWMM input files
+
+## Recent Changes
+
+### API Query Format (January 2026)
+- All frontend API calls use query parameters for filtering: `/api/simulations?projectId=X`
+- TanStack Query keys encode the full URL with query parameters: `["/api/simulations?projectId=${projectId}"]`
+- This format works with the default query function that joins array elements with "/"
+
+### Demo Data
+The application includes seeded demo data for immediate testing:
+- 2 projects: "Downtown Sewer Analysis" (proj-1), "Northside Rehabilitation" (proj-2)
+- 2 simulations for proj-1: "Baseline Simulation" (completed), "Storm Event Analysis" (running)
+- 3 RDII parameter sets: Downtown Core, Commercial District, Residential North
+- 2 condition assessments with pre/post rehabilitation data
+- 3 SSO events with varying severity levels
+
+## Development Notes
+
+### Query Client Configuration
+The query client (`client/src/lib/queryClient.ts`) uses a default query function that:
+- Joins queryKey array elements with "/" to form the URL
+- For query parameters, include them directly in the first element of the queryKey array
+
+### Theme Support
+The application supports light/dark/system modes via:
+- ThemeProvider component in `client/src/components/theme-provider.tsx`
+- Theme selection stored in localStorage
+- CSS variables defined in `client/src/index.css`
