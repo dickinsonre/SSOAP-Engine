@@ -1,0 +1,589 @@
+import { useState, useCallback } from "react";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import {
+  Play,
+  Square,
+  Upload,
+  FileText,
+  Clock,
+  CheckCircle,
+  XCircle,
+  Loader2,
+  Download,
+  Trash2,
+  RefreshCw,
+} from "lucide-react";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { useToast } from "@/hooks/use-toast";
+import { queryClient, apiRequest } from "@/lib/queryClient";
+import type { Simulation, Project, NodeResult, LinkResult } from "@shared/schema";
+
+function FileUploadZone({
+  onFileSelect,
+  isUploading,
+}: {
+  onFileSelect: (file: File) => void;
+  isUploading: boolean;
+}) {
+  const [isDragging, setIsDragging] = useState(false);
+
+  const handleDragOver = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(true);
+  }, []);
+
+  const handleDragLeave = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+  }, []);
+
+  const handleDrop = useCallback(
+    (e: React.DragEvent) => {
+      e.preventDefault();
+      setIsDragging(false);
+      const file = e.dataTransfer.files[0];
+      if (file && (file.name.endsWith(".inp") || file.name.endsWith(".rpt"))) {
+        onFileSelect(file);
+      }
+    },
+    [onFileSelect]
+  );
+
+  const handleFileInput = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0];
+      if (file) {
+        onFileSelect(file);
+      }
+    },
+    [onFileSelect]
+  );
+
+  return (
+    <Card
+      className={`border-dashed transition-colors ${
+        isDragging ? "border-primary bg-primary/5" : ""
+      }`}
+      onDragOver={handleDragOver}
+      onDragLeave={handleDragLeave}
+      onDrop={handleDrop}
+    >
+      <CardContent className="flex flex-col items-center justify-center py-12">
+        <div className="flex h-16 w-16 items-center justify-center rounded-full bg-muted mb-4">
+          {isUploading ? (
+            <Loader2 className="h-8 w-8 text-muted-foreground animate-spin" />
+          ) : (
+            <Upload className="h-8 w-8 text-muted-foreground" />
+          )}
+        </div>
+        <h3 className="text-lg font-semibold mb-2">Upload SWMM Input File</h3>
+        <p className="text-sm text-muted-foreground text-center max-w-md mb-4">
+          Drag and drop your .inp file here, or click to browse. The file will be
+          processed using the SWMM5 WebAssembly engine.
+        </p>
+        <input
+          type="file"
+          accept=".inp,.rpt"
+          onChange={handleFileInput}
+          className="hidden"
+          id="file-upload"
+          disabled={isUploading}
+        />
+        <label htmlFor="file-upload">
+          <Button asChild disabled={isUploading} data-testid="button-upload-file">
+            <span>
+              <FileText className="mr-2 h-4 w-4" />
+              {isUploading ? "Uploading..." : "Select File"}
+            </span>
+          </Button>
+        </label>
+      </CardContent>
+    </Card>
+  );
+}
+
+function SimulationStatusIcon({ status }: { status: Simulation["status"] }) {
+  switch (status) {
+    case "pending":
+      return <Clock className="h-4 w-4 text-muted-foreground" />;
+    case "running":
+      return <Loader2 className="h-4 w-4 text-primary animate-spin" />;
+    case "completed":
+      return <CheckCircle className="h-4 w-4 text-green-600" />;
+    case "failed":
+      return <XCircle className="h-4 w-4 text-destructive" />;
+  }
+}
+
+function SimulationCard({
+  simulation,
+  onRun,
+  onStop,
+  onDelete,
+  isSelected,
+  onSelect,
+}: {
+  simulation: Simulation;
+  onRun: () => void;
+  onStop: () => void;
+  onDelete: () => void;
+  isSelected: boolean;
+  onSelect: () => void;
+}) {
+  const statusColors = {
+    pending: "bg-muted text-muted-foreground",
+    running: "bg-primary/10 text-primary",
+    completed: "bg-green-500/10 text-green-600 dark:text-green-400",
+    failed: "bg-destructive/10 text-destructive",
+  };
+
+  return (
+    <Card
+      className={`cursor-pointer transition-colors ${
+        isSelected ? "ring-2 ring-primary" : "hover-elevate"
+      }`}
+      onClick={onSelect}
+      data-testid={`card-simulation-${simulation.id}`}
+    >
+      <CardHeader className="pb-3">
+        <div className="flex items-start justify-between gap-2">
+          <div className="flex items-center gap-3">
+            <SimulationStatusIcon status={simulation.status} />
+            <div>
+              <CardTitle className="text-sm">{simulation.name}</CardTitle>
+              <CardDescription className="text-xs">
+                {simulation.inputFile.split("/").pop()}
+              </CardDescription>
+            </div>
+          </div>
+          <Badge className={statusColors[simulation.status]} variant="secondary">
+            {simulation.status}
+          </Badge>
+        </div>
+      </CardHeader>
+      <CardContent>
+        {simulation.status === "running" && (
+          <div className="space-y-2 mb-3">
+            <div className="flex justify-between text-xs">
+              <span>Progress</span>
+              <span>{simulation.progress}%</span>
+            </div>
+            <Progress value={simulation.progress} className="h-1.5" />
+          </div>
+        )}
+        <div className="flex items-center gap-2">
+          {simulation.status === "pending" && (
+            <Button size="sm" onClick={(e) => { e.stopPropagation(); onRun(); }} data-testid={`button-run-${simulation.id}`}>
+              <Play className="mr-1 h-3 w-3" />
+              Run
+            </Button>
+          )}
+          {simulation.status === "running" && (
+            <Button size="sm" variant="destructive" onClick={(e) => { e.stopPropagation(); onStop(); }} data-testid={`button-stop-${simulation.id}`}>
+              <Square className="mr-1 h-3 w-3" />
+              Stop
+            </Button>
+          )}
+          {simulation.status === "completed" && (
+            <Button size="sm" variant="outline" onClick={(e) => { e.stopPropagation(); onRun(); }} data-testid={`button-rerun-${simulation.id}`}>
+              <RefreshCw className="mr-1 h-3 w-3" />
+              Re-run
+            </Button>
+          )}
+          <Button
+            size="icon"
+            variant="ghost"
+            onClick={(e) => { e.stopPropagation(); onDelete(); }}
+            className="ml-auto"
+            data-testid={`button-delete-${simulation.id}`}
+          >
+            <Trash2 className="h-4 w-4" />
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+function NodeResultsTable({ results }: { results: NodeResult[] }) {
+  if (!results || results.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center py-12">
+        <p className="text-sm text-muted-foreground">No node results available</p>
+      </div>
+    );
+  }
+
+  return (
+    <ScrollArea className="h-[400px]">
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>Node ID</TableHead>
+            <TableHead>Type</TableHead>
+            <TableHead className="text-right">Max Depth (ft)</TableHead>
+            <TableHead className="text-right">Max HGL (ft)</TableHead>
+            <TableHead className="text-right">Time Flooded (hr)</TableHead>
+            <TableHead className="text-right">Flood Volume (MG)</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {results.map((node) => (
+            <TableRow key={node.id} data-testid={`row-node-${node.id}`}>
+              <TableCell className="font-medium">{node.name}</TableCell>
+              <TableCell>
+                <Badge variant="outline">{node.type}</Badge>
+              </TableCell>
+              <TableCell className="text-right font-mono">
+                {node.maxDepth.toFixed(2)}
+              </TableCell>
+              <TableCell className="text-right font-mono">
+                {node.maxHGL.toFixed(2)}
+              </TableCell>
+              <TableCell className="text-right font-mono">
+                {node.timeFlooded.toFixed(2)}
+              </TableCell>
+              <TableCell className="text-right font-mono">
+                {node.floodVolume.toFixed(4)}
+              </TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+    </ScrollArea>
+  );
+}
+
+function LinkResultsTable({ results }: { results: LinkResult[] }) {
+  if (!results || results.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center py-12">
+        <p className="text-sm text-muted-foreground">No link results available</p>
+      </div>
+    );
+  }
+
+  return (
+    <ScrollArea className="h-[400px]">
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>Link ID</TableHead>
+            <TableHead>Type</TableHead>
+            <TableHead className="text-right">Max Flow (cfs)</TableHead>
+            <TableHead className="text-right">Max Velocity (fps)</TableHead>
+            <TableHead className="text-right">Max Depth (ft)</TableHead>
+            <TableHead className="text-right">Capacity Limited (hr)</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {results.map((link) => (
+            <TableRow key={link.id} data-testid={`row-link-${link.id}`}>
+              <TableCell className="font-medium">{link.name}</TableCell>
+              <TableCell>
+                <Badge variant="outline">{link.type}</Badge>
+              </TableCell>
+              <TableCell className="text-right font-mono">
+                {link.maxFlow.toFixed(2)}
+              </TableCell>
+              <TableCell className="text-right font-mono">
+                {link.maxVelocity.toFixed(2)}
+              </TableCell>
+              <TableCell className="text-right font-mono">
+                {link.maxDepth.toFixed(2)}
+              </TableCell>
+              <TableCell className="text-right font-mono">
+                {link.capacityLimited.toFixed(2)}
+              </TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+    </ScrollArea>
+  );
+}
+
+function SimulationResults({ simulation }: { simulation: Simulation }) {
+  if (!simulation.outputData) {
+    return (
+      <Card>
+        <CardContent className="flex flex-col items-center justify-center py-12">
+          <p className="text-sm text-muted-foreground">
+            {simulation.status === "running"
+              ? "Simulation in progress..."
+              : simulation.status === "failed"
+              ? "Simulation failed. Check logs for details."
+              : "Run the simulation to see results."}
+          </p>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  const { outputData } = simulation;
+
+  return (
+    <div className="space-y-4">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm text-muted-foreground">Total Inflow</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-semibold font-mono">
+              {outputData.totalInflow.toLocaleString()}
+            </div>
+            <p className="text-xs text-muted-foreground">Million Gallons</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm text-muted-foreground">Total Outflow</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-semibold font-mono">
+              {outputData.totalOutflow.toLocaleString()}
+            </div>
+            <p className="text-xs text-muted-foreground">Million Gallons</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm text-muted-foreground">Peak Flow</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-semibold font-mono">
+              {outputData.peakFlow.toFixed(1)}
+            </div>
+            <p className="text-xs text-muted-foreground">CFS at {outputData.peakTime}</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm text-muted-foreground">Overflow Volume</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-semibold font-mono text-destructive">
+              {outputData.overflowVolume.toLocaleString()}
+            </div>
+            <p className="text-xs text-muted-foreground">
+              {outputData.overflowCount} overflow events
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg">Detailed Results</CardTitle>
+          <CardDescription>Node and link simulation results</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Tabs defaultValue="nodes">
+            <TabsList>
+              <TabsTrigger value="nodes" data-testid="tab-nodes">Node Results</TabsTrigger>
+              <TabsTrigger value="links" data-testid="tab-links">Link Results</TabsTrigger>
+            </TabsList>
+            <TabsContent value="nodes">
+              <NodeResultsTable results={outputData.nodeResults} />
+            </TabsContent>
+            <TabsContent value="links">
+              <LinkResultsTable results={outputData.linkResults} />
+            </TabsContent>
+          </Tabs>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+export default function SimulationPage() {
+  const [selectedProject, setSelectedProject] = useState<string>("");
+  const [selectedSimulation, setSelectedSimulation] = useState<Simulation | null>(null);
+  const { toast } = useToast();
+
+  const { data: projects } = useQuery<Project[]>({
+    queryKey: ["/api/projects"],
+  });
+
+  const { data: simulations, isLoading } = useQuery<Simulation[]>({
+    queryKey: [`/api/simulations?projectId=${selectedProject}`],
+    enabled: !!selectedProject,
+  });
+
+  const uploadMutation = useMutation({
+    mutationFn: async (file: File) => {
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("projectId", selectedProject);
+      const response = await fetch("/api/simulations/upload", {
+        method: "POST",
+        body: formData,
+      });
+      if (!response.ok) throw new Error("Upload failed");
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [`/api/simulations?projectId=${selectedProject}`] });
+      toast({ title: "File uploaded", description: "Simulation created successfully." });
+    },
+    onError: () => {
+      toast({ title: "Upload failed", description: "Please try again.", variant: "destructive" });
+    },
+  });
+
+  const runMutation = useMutation({
+    mutationFn: async (id: string) => {
+      return apiRequest("POST", `/api/simulations/${id}/run`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [`/api/simulations?projectId=${selectedProject}`] });
+      toast({ title: "Simulation started" });
+    },
+  });
+
+  const stopMutation = useMutation({
+    mutationFn: async (id: string) => {
+      return apiRequest("POST", `/api/simulations/${id}/stop`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [`/api/simulations?projectId=${selectedProject}`] });
+      toast({ title: "Simulation stopped" });
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: async (id: string) => {
+      return apiRequest("DELETE", `/api/simulations/${id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [`/api/simulations?projectId=${selectedProject}`] });
+      setSelectedSimulation(null);
+      toast({ title: "Simulation deleted" });
+    },
+  });
+
+  return (
+    <div className="p-6 space-y-6">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h1 className="text-2xl font-semibold" data-testid="text-simulation-title">
+            SWMM5 Simulation
+          </h1>
+          <p className="text-sm text-muted-foreground">
+            Run hydraulic simulations using the WebAssembly SWMM5 engine
+          </p>
+        </div>
+        <div className="flex items-center gap-3">
+          <Badge variant="outline" className="font-mono">
+            SWMM 5.1 WASM
+          </Badge>
+          <Select value={selectedProject} onValueChange={setSelectedProject}>
+            <SelectTrigger className="w-[200px]" data-testid="select-project">
+              <SelectValue placeholder="Select project" />
+            </SelectTrigger>
+            <SelectContent>
+              {projects?.map((project) => (
+                <SelectItem key={project.id} value={project.id}>
+                  {project.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
+      {!selectedProject ? (
+        <Card className="border-dashed">
+          <CardContent className="flex flex-col items-center justify-center py-12">
+            <p className="text-sm text-muted-foreground">
+              Select a project to view and run simulations
+            </p>
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="grid gap-6 lg:grid-cols-3">
+          <div className="space-y-4">
+            <FileUploadZone
+              onFileSelect={(file) => uploadMutation.mutate(file)}
+              isUploading={uploadMutation.isPending}
+            />
+
+            {isLoading ? (
+              <div className="space-y-3">
+                {[...Array(3)].map((_, i) => (
+                  <Card key={i}>
+                    <CardHeader className="pb-3">
+                      <Skeleton className="h-4 w-32" />
+                    </CardHeader>
+                    <CardContent>
+                      <Skeleton className="h-8 w-20" />
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            ) : simulations && simulations.length > 0 ? (
+              <div className="space-y-3">
+                {simulations.map((sim) => (
+                  <SimulationCard
+                    key={sim.id}
+                    simulation={sim}
+                    onRun={() => runMutation.mutate(sim.id)}
+                    onStop={() => stopMutation.mutate(sim.id)}
+                    onDelete={() => deleteMutation.mutate(sim.id)}
+                    isSelected={selectedSimulation?.id === sim.id}
+                    onSelect={() => setSelectedSimulation(sim)}
+                  />
+                ))}
+              </div>
+            ) : (
+              <Card className="border-dashed">
+                <CardContent className="flex flex-col items-center justify-center py-8">
+                  <p className="text-sm text-muted-foreground text-center">
+                    No simulations yet. Upload a SWMM input file to get started.
+                  </p>
+                </CardContent>
+              </Card>
+            )}
+          </div>
+
+          <div className="lg:col-span-2">
+            {selectedSimulation ? (
+              <SimulationResults simulation={selectedSimulation} />
+            ) : (
+              <Card className="h-full">
+                <CardContent className="flex flex-col items-center justify-center h-full min-h-[400px]">
+                  <Play className="h-12 w-12 text-muted-foreground mb-4" />
+                  <p className="text-sm text-muted-foreground text-center">
+                    Select a simulation to view results
+                  </p>
+                </CardContent>
+              </Card>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
