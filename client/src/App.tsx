@@ -21,6 +21,7 @@ import ConditionAssessmentPage from "@/pages/condition-assessment";
 import SSOEventsPage from "@/pages/sso-events";
 import DocumentsPage from "@/pages/documents";
 import SettingsPage from "@/pages/settings";
+import RDIIStudioPage from "@/pages/rdii-studio";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -35,6 +36,7 @@ function Router() {
       <Route path="/condition-assessment" component={ConditionAssessmentPage} />
       <Route path="/sso-events" component={SSOEventsPage} />
       <Route path="/documents" component={DocumentsPage} />
+      <Route path="/rdii-studio" component={RDIIStudioPage} />
       <Route path="/settings" component={SettingsPage} />
       <Route component={NotFound} />
     </Switch>

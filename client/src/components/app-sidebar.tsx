@@ -11,6 +11,7 @@ import {
   AlertTriangle,
   FileText,
   Waves,
+  FlaskConical,
 } from "lucide-react";
 import {
   Sidebar,
@@ -66,6 +67,12 @@ const analysisTools = [
     title: "Condition Assessment",
     url: "/condition-assessment",
     icon: ClipboardCheck,
+  },
+  {
+    title: "RDII Studio",
+    url: "/rdii-studio",
+    icon: FlaskConical,
+    badge: "NEW",
   },
 ];
 
