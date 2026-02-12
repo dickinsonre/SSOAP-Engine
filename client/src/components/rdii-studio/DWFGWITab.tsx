@@ -1,5 +1,5 @@
 import { useState, useCallback } from "react";
-import { Waves, ArrowRight, Play } from "lucide-react";
+import { Waves, ArrowRight, Play, AlertTriangle } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -24,67 +24,48 @@ interface DWFGWITabProps {
 export function DWFGWITab({ onNext }: DWFGWITabProps) {
   const { flowData, rainfallData, dwfResult, setDWFResult } = useCalibrationData();
   const [running, setRunning] = useState(false);
+  const [noDryDays, setNoDryDays] = useState(false);
 
   const handleSeparate = useCallback(() => {
     if (!flowData || !rainfallData) return;
     setRunning(true);
+    setNoDryDays(false);
     setTimeout(() => {
       const n = flowData.timestamps.length;
-      const hourMs = 3600000;
-      const dayMs = 86400000;
 
-      const dayMap = new Map<string, { flows: number[]; rain: number }>();
+      const localDayKey = (d: Date) =>
+        `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 
-      for (let i = 0; i < n; i++) {
-        const dayKey = flowData.timestamps[i].toISOString().slice(0, 10);
-        if (!dayMap.has(dayKey)) dayMap.set(dayKey, { flows: [], rain: 0 });
-        const entry = dayMap.get(dayKey)!;
-        entry.flows.push(flowData.values[i]);
-      }
-
+      const dayRain = new Map<string, number>();
       for (let i = 0; i < rainfallData.timestamps.length; i++) {
-        const dayKey = rainfallData.timestamps[i].toISOString().slice(0, 10);
-        if (dayMap.has(dayKey)) {
-          dayMap.get(dayKey)!.rain += rainfallData.values[i];
-        }
-      }
-
-      const dryDays: { flows: number[] }[] = [];
-      for (const [, entry] of dayMap) {
-        if (entry.rain <= 0.01 && entry.flows.length > 0) {
-          dryDays.push({ flows: entry.flows });
-        }
+        const key = localDayKey(rainfallData.timestamps[i]);
+        dayRain.set(key, (dayRain.get(key) || 0) + rainfallData.values[i]);
       }
 
       const hourlyPattern = new Array(24).fill(0);
       const hourlyCounts = new Array(24).fill(0);
       let gwiEstimate = Infinity;
+      let hasDryDays = false;
 
-      if (dryDays.length > 0) {
-        for (const day of dryDays) {
-          const stepsPerHour = Math.max(1, Math.floor(day.flows.length / 24));
-          let dayMin = Infinity;
-          for (let h = 0; h < 24 && h * stepsPerHour < day.flows.length; h++) {
-            const start = h * stepsPerHour;
-            const end = Math.min(start + stepsPerHour, day.flows.length);
-            let sum = 0;
-            let count = 0;
-            for (let k = start; k < end; k++) {
-              sum += day.flows[k];
-              count++;
-              if (day.flows[k] < dayMin) dayMin = day.flows[k];
-            }
-            if (count > 0) {
-              hourlyPattern[h] += sum / count;
-              hourlyCounts[h]++;
-            }
-          }
-          if (dayMin < gwiEstimate) gwiEstimate = dayMin;
+      for (let i = 0; i < n; i++) {
+        const ts = flowData.timestamps[i];
+        const key = localDayKey(ts);
+        const totalRain = dayRain.get(key) || 0;
+        if (totalRain <= 0.01) {
+          hasDryDays = true;
+          const h = ts.getHours();
+          hourlyPattern[h] += flowData.values[i];
+          hourlyCounts[h]++;
+          if (flowData.values[i] < gwiEstimate) gwiEstimate = flowData.values[i];
         }
+      }
+
+      if (hasDryDays) {
         for (let h = 0; h < 24; h++) {
           hourlyPattern[h] = hourlyCounts[h] > 0 ? hourlyPattern[h] / hourlyCounts[h] : 0;
         }
       } else {
+        setNoDryDays(true);
         const meanFlow = flowData.values.reduce((a, b) => a + b, 0) / n;
         hourlyPattern.fill(meanFlow);
         gwiEstimate = Math.min(...flowData.values) * 0.8;
@@ -149,6 +130,17 @@ export function DWFGWITab({ onNext }: DWFGWITabProps) {
           {running ? "Processing..." : "Separate DWF/GWI"}
         </Button>
       </div>
+
+      {noDryDays && dwfResult && (
+        <Card className="border-warning/50 bg-warning/5">
+          <CardContent className="flex items-center gap-3 pt-4 pb-3">
+            <AlertTriangle className="h-5 w-5 text-warning shrink-0" />
+            <p className="text-sm text-muted-foreground" data-testid="text-no-dry-days-warning">
+              No dry days found in the data. DWF was estimated using overall mean flow and GWI from minimum observed flow. For more accurate results, import a longer time series that includes dry weather periods.
+            </p>
+          </CardContent>
+        </Card>
+      )}
 
       {dwfResult && (
         <>

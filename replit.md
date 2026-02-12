@@ -50,6 +50,7 @@ Preferred communication style: Simple, everyday language.
 - Hydrograph: Flow visualization with Recharts
 - Condition Assessment: Pipe condition tracking
 - SSO Events: Overflow event logging and analysis
+- RDII Studio: Complete 10-tab RDII calibration workflow (Data Import, QA/QC, DWF & GWI, RDII Series, Events, Calibrate, Compare, Time Series, Export, Docs)
 - Settings: Theme configuration and system info
 
 ## External Dependencies
@@ -89,6 +90,15 @@ The application includes seeded demo data for immediate testing:
 - 3 DWF patterns with weekday/weekend multipliers and GWI for Downtown Core, Commercial District, Residential North
 - 2 condition assessments with pre/post rehabilitation data
 - 3 SSO events with varying severity levels
+
+### RDII Studio (February 2026)
+- New page at `/rdii-studio` with 10-tab calibration workflow
+- CalibrationDataContext in `client/src/contexts/CalibrationDataContext.tsx` manages shared state (flow/rainfall data, events, optimization results)
+- File format parsers in `client/src/lib/fileFormatParsers.ts` support CSV and SWMM5 formats
+- Sample data in `client/public/sample-data/` (3-day hourly flow + rainfall CSV, served by Vite from client root)
+- Tab components in `client/src/components/rdii-studio/`
+- Client-side NSGA-II multi-objective optimization for RTK parameter calibration
+- All processing is client-side (no server endpoints needed)
 
 ## Development Notes
 

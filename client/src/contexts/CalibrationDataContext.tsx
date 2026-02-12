@@ -146,9 +146,13 @@ export function CalibrationDataProvider({ children }: { children: ReactNode }) {
       if (flowResp.ok && rainResp.ok) {
         const flowText = await flowResp.text();
         const rainText = await rainResp.text();
-        setFlowData(parseCSV(flowText, "Flow", "MGD"));
-        setRainfallData(parseCSV(rainText, "Rainfall", "in"));
-        setSampleDataLoaded(true);
+        const parsedFlow = parseCSV(flowText, "Flow", "MGD");
+        const parsedRain = parseCSV(rainText, "Rainfall", "in");
+        if (parsedFlow.timestamps.length > 0 && parsedRain.timestamps.length > 0) {
+          setFlowData(parsedFlow);
+          setRainfallData(parsedRain);
+          setSampleDataLoaded(true);
+        }
       }
     } catch {
       // Sample data not available

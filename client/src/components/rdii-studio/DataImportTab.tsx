@@ -68,14 +68,19 @@ export function DataImportTab({ onNext }: DataImportTabProps) {
     }
   }, [loadSampleData]);
 
-  const formatDate = (d: Date) => d.toLocaleDateString() + " " + d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  const formatDate = (d: Date | undefined) => {
+    if (!d || !(d instanceof Date) || isNaN(d.getTime())) return "N/A";
+    return d.toLocaleDateString() + " " + d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  };
 
   const buildChartData = (data: ParsedTimeSeriesData) => {
+    if (!data.timestamps.length) return [];
     const step = Math.max(1, Math.floor(data.timestamps.length / 500));
     const result: { time: string; value: number }[] = [];
     for (let i = 0; i < data.timestamps.length; i += step) {
+      const ts = data.timestamps[i];
       result.push({
-        time: data.timestamps[i].toLocaleDateString(),
+        time: ts instanceof Date && !isNaN(ts.getTime()) ? ts.toLocaleDateString() : `${i}`,
         value: data.values[i],
       });
     }

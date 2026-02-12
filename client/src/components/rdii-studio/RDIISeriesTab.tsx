@@ -50,7 +50,7 @@ export function RDIISeriesTab({ onNext }: RDIISeriesTabProps) {
     }, 200);
   }, [flowData, dwfResult, setRDIISeries]);
 
-  const peakRDII = rdiiSeries ? Math.max(...rdiiSeries.values) : 0;
+  const peakRDII = rdiiSeries && rdiiSeries.values.length > 0 ? Math.max(...rdiiSeries.values) : 0;
   const totalFlow = flowData ? flowData.values.reduce((a, b) => a + b, 0) : 0;
   const rdiiPct = totalFlow > 0 && rdiiSeries ? ((rdiiSeries.totalVolume / totalFlow) * 100) : 0;
 
