@@ -94,7 +94,7 @@ The application includes seeded demo data for immediate testing:
 ### RDII Studio (February 2026)
 - New page at `/rdii-studio` with 10-tab calibration workflow
 - CalibrationDataContext in `client/src/contexts/CalibrationDataContext.tsx` manages shared state (flow/rainfall data, events, optimization results)
-- File format parsers in `client/src/lib/fileFormatParsers.ts` support CSV and SWMM5 formats
+- File format parsers in `client/src/lib/fileFormatParsers.ts` support CSV, SWMM5, ICM SWMM, and InfoWorks ICM formats
 - Sample data in `client/public/sample-data/` (3-day hourly flow + rainfall CSV, served by Vite from client root)
 - Tab components in `client/src/components/rdii-studio/`
 - Client-side NSGA-II multi-objective optimization for RTK parameter calibration
@@ -112,6 +112,12 @@ The application includes seeded demo data for immediate testing:
 - **Brush Zoom/Pan**: Recharts Brush component on all major hydrograph charts (DataImport, Calibrate, Compare, TimeSeries) for interactive range selection
 - **Enhanced Drag-and-Drop**: File validation (type check, 50MB size limit), visual feedback (scale, shadow), error/success messages
 - New server endpoint: `POST /api/calibration/run-direct` accepts raw rainfall/observed arrays for tournament GA
+- **AutoConstraintDetector**: Real-time RTK constraint validation (R sum ≤ 1.0, T1<T2<T3, K1<K2<K3) with pass/fail badges
+- **CalibrationWizard**: 3-step guided wizard (Event Selection → RTK Optimization → SWMM5 Export) in Calibrate tab
+- **CalibrationProjectManager**: Save/load calibration sessions to localStorage with basin metadata, performance badges, load/delete
+- **HydrographVisualization**: Fast/medium/slow RDII response curve breakdown as stacked filled areas with observed overlay
+- **ICM Format Parsers**: ICM SWMM and InfoWorks ICM file format parsers with auto-detection in fileFormatParsers.ts
+- **HelpTooltip**: Reusable contextual "?" help tooltips throughout RDII Studio (Calibrate metrics, QA/QC, DWF/GWI)
 
 ## Development Notes
 

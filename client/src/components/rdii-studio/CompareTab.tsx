@@ -1,6 +1,8 @@
 import { GitCompare, ArrowRight } from "lucide-react";
 import { ModelValidationDashboard } from "./ModelValidationDashboard";
 import { ParameterCorrelationMatrix } from "./ParameterCorrelationMatrix";
+import { CalibrationProjectManager } from "./CalibrationProjectManager";
+import { HydrographVisualization } from "./HydrographVisualization";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -173,9 +175,13 @@ export function CompareTab({ onNext }: CompareTabProps) {
         </Card>
       )}
 
+      <HydrographVisualization />
+
       <ModelValidationDashboard />
 
       <ParameterCorrelationMatrix />
+
+      <CalibrationProjectManager />
 
       {onNext && (
         <div className="flex justify-end">

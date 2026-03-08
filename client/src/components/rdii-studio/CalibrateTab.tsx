@@ -15,7 +15,10 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { useCalibrationData } from "@/contexts/CalibrationDataContext";
+import { HelpTooltip } from "./HelpTooltip";
 import type { OptimizationResult } from "@/contexts/CalibrationDataContext";
+import { AutoConstraintDetector } from "./AutoConstraintDetector";
+import { CalibrationWizard } from "./CalibrationWizard";
 import {
   ComposedChart,
   Area,
@@ -479,7 +482,10 @@ export function CalibrateTab({ onNext }: CalibrateTabProps) {
     <div className="space-y-6">
       <Card>
         <CardHeader className="pb-3">
-          <CardTitle className="text-sm">Parameter Bounds</CardTitle>
+          <div className="flex items-center gap-1.5">
+            <CardTitle className="text-sm">Parameter Bounds</CardTitle>
+            <HelpTooltip text="R is the fraction of rainfall that becomes RDII. T is the time-to-peak in hours. K is the recession ratio (recession time / time-to-peak). Fast, Medium, and Slow represent three triangular unit hydrograph responses." />
+          </div>
           <CardDescription className="text-xs">
             Constraints: R1+R2+R3 &le; 1.0 &bull; T1 &lt; T2 &lt; T3 &bull; K1 &lt; K2 &lt; K3
           </CardDescription>
@@ -505,6 +511,14 @@ export function CalibrateTab({ onNext }: CalibrateTabProps) {
           </div>
         </CardContent>
       </Card>
+
+      <AutoConstraintDetector bounds={bounds} />
+
+      <CalibrationWizard
+        onRunCalibration={handleCalibrate}
+        isCalibrating={running}
+        calibrationDone={optimizationResults.length > 0}
+      />
 
       <div className="flex items-center gap-4 flex-wrap">
         <Button onClick={handleCalibrate} disabled={running} data-testid="button-run-calibration">
@@ -545,25 +559,37 @@ export function CalibrateTab({ onNext }: CalibrateTabProps) {
             <Card>
               <CardContent className="pt-4 text-center">
                 <p className="text-2xl font-bold font-mono" data-testid="text-rmse">{latestResult.rmse.toFixed(4)}</p>
-                <p className="text-xs text-muted-foreground">RMSE</p>
+                <div className="flex items-center justify-center gap-1">
+                  <p className="text-xs text-muted-foreground">RMSE</p>
+                  <HelpTooltip text="Root Mean Square Error. Lower values indicate better fit between observed and simulated flows. Measures average prediction error magnitude." />
+                </div>
               </CardContent>
             </Card>
             <Card>
               <CardContent className="pt-4 text-center">
                 <p className="text-2xl font-bold font-mono" data-testid="text-nse">{(latestResult.nse * 100).toFixed(1)}%</p>
-                <p className="text-xs text-muted-foreground">NSE</p>
+                <div className="flex items-center justify-center gap-1">
+                  <p className="text-xs text-muted-foreground">NSE</p>
+                  <HelpTooltip text="Nash-Sutcliffe Efficiency. Ranges from -infinity to 1.0. Values above 0.5 indicate acceptable model performance. A value of 1.0 means perfect prediction." />
+                </div>
               </CardContent>
             </Card>
             <Card>
               <CardContent className="pt-4 text-center">
                 <p className="text-2xl font-bold font-mono" data-testid="text-vol-error">{latestResult.volumeError.toFixed(1)}%</p>
-                <p className="text-xs text-muted-foreground">Volume Error</p>
+                <div className="flex items-center justify-center gap-1">
+                  <p className="text-xs text-muted-foreground">Volume Error</p>
+                  <HelpTooltip text="Percentage difference between total simulated and observed flow volumes. Values close to 0% indicate good volume conservation." />
+                </div>
               </CardContent>
             </Card>
             <Card>
               <CardContent className="pt-4 text-center">
                 <p className="text-2xl font-bold font-mono" data-testid="text-peak-error">{latestResult.peakError.toFixed(1)}%</p>
-                <p className="text-xs text-muted-foreground">Peak Error</p>
+                <div className="flex items-center justify-center gap-1">
+                  <p className="text-xs text-muted-foreground">Peak Error</p>
+                  <HelpTooltip text="Percentage difference between simulated and observed peak flows. Values close to 0% indicate accurate peak flow prediction." />
+                </div>
               </CardContent>
             </Card>
           </div>

@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/table";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useCalibrationData } from "@/contexts/CalibrationDataContext";
+import { HelpTooltip } from "./HelpTooltip";
 import type { ParsedTimeSeriesData, QAQCResult, QAQCIssue } from "@/contexts/CalibrationDataContext";
 
 interface QAQCTabProps {
@@ -149,10 +150,13 @@ export function QAQCTab({ onNext }: QAQCTabProps) {
   return (
     <div className="space-y-6">
       <div className="flex justify-end">
-        <Button onClick={handleRunQAQC} disabled={running} data-testid="button-run-qaqc">
-          <Play className="mr-2 h-4 w-4" />
-          {running ? "Running..." : "Run QA/QC"}
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button onClick={handleRunQAQC} disabled={running} data-testid="button-run-qaqc">
+            <Play className="mr-2 h-4 w-4" />
+            {running ? "Running..." : "Run QA/QC"}
+          </Button>
+          <HelpTooltip text="Quality Assurance / Quality Control checks validate your data for missing values, outliers (beyond 3 standard deviations), time gaps, duplicate timestamps, and negative values before analysis." />
+        </div>
       </div>
 
       {(qaqcFlowResult || qaqcRainfallResult) && (

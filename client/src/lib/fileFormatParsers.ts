@@ -70,6 +70,116 @@ function parseSWMM5TimeSeries(content: string): ParsedTimeSeriesData[] {
   return results;
 }
 
+function parseICMSWMMExport(content: string): ParsedTimeSeriesData[] {
+  const lines = content.split("\n");
+  const timestamps: Date[] = [];
+  const values: number[] = [];
+  let seriesName = "ICM SWMM Series";
+  let units = "varies";
+  let headerParsed = false;
+
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith("#") || trimmed.startsWith("!")) continue;
+
+    if (!headerParsed) {
+      const lower = trimmed.toLowerCase();
+      if (lower.includes("node") || lower.includes("link") || lower.includes("name")) {
+        const parts = trimmed.split(/[\t,;]+/).map(s => s.trim());
+        if (parts.length >= 2) seriesName = parts[1] || parts[0];
+        headerParsed = true;
+        continue;
+      }
+      if (lower.includes("flow") || lower.includes("mgd") || lower.includes("cfs")) {
+        units = guessUnits(trimmed);
+        continue;
+      }
+    }
+
+    const parts = trimmed.split(/[\t,;]+/).map(s => s.trim());
+    if (parts.length >= 2) {
+      let ts: Date | null = null;
+      let val = NaN;
+
+      if (parts.length >= 3) {
+        ts = new Date(`${parts[0]} ${parts[1]}`);
+        val = parseFloat(parts[2]);
+      } else {
+        ts = new Date(parts[0]);
+        val = parseFloat(parts[1]);
+      }
+
+      if (ts && !isNaN(ts.getTime()) && !isNaN(val)) {
+        timestamps.push(ts);
+        values.push(val);
+      }
+    }
+  }
+
+  if (timestamps.length === 0) return [];
+  return [{ timestamps, values, units, seriesName, format: "icm-swmm" }];
+}
+
+function parseInfoWorksExport(content: string): ParsedTimeSeriesData[] {
+  const lines = content.split("\n");
+  const timestamps: Date[] = [];
+  const values: number[] = [];
+  let seriesName = "InfoWorks Series";
+  let units = "varies";
+  let dataStarted = false;
+
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (!trimmed) continue;
+
+    if (!dataStarted) {
+      const lower = trimmed.toLowerCase();
+      if (lower.includes("infoworks") || lower.includes("innovyze") || lower.includes("autodesk")) continue;
+      if (lower.includes("node") || lower.includes("link") || lower.includes("conduit")) {
+        const parts = trimmed.split(/[\t\s,;]+/).filter(Boolean);
+        if (parts.length >= 2) seriesName = parts[parts.length - 1] || parts[0];
+        continue;
+      }
+      if (lower.includes("flow") || lower.includes("depth") || lower.includes("velocity")) {
+        units = guessUnits(trimmed);
+        continue;
+      }
+
+      const firstParts = trimmed.split(/[\t\s]+/).filter(Boolean);
+      if (firstParts.length >= 2) {
+        const testDate = new Date(firstParts[0]);
+        if (!isNaN(testDate.getTime())) {
+          dataStarted = true;
+        }
+      }
+
+      if (!dataStarted) continue;
+    }
+
+    const parts = trimmed.split(/[\t\s]+/).filter(Boolean);
+    if (parts.length >= 2) {
+      let ts: Date | null = null;
+      let val = NaN;
+
+      if (parts.length >= 3) {
+        ts = new Date(`${parts[0]} ${parts[1]}`);
+        val = parseFloat(parts[parts.length - 1]);
+      } else {
+        ts = new Date(parts[0]);
+        val = parseFloat(parts[1]);
+      }
+
+      if (ts && !isNaN(ts.getTime()) && !isNaN(val)) {
+        timestamps.push(ts);
+        values.push(val);
+      }
+    }
+  }
+
+  if (timestamps.length === 0) return [];
+  return [{ timestamps, values, units, seriesName, format: "icm-infoworks" }];
+}
+
 function parseCSVGeneric(content: string, filename: string): ParsedTimeSeriesData[] {
   const lines = content.trim().split("\n");
   if (lines.length < 2) return [];
@@ -130,6 +240,10 @@ export async function parseFile(file: File): Promise<{ format: FileFormat; data:
   switch (format) {
     case "swmm5":
       return { format, data: parseSWMM5TimeSeries(content) };
+    case "icm-swmm":
+      return { format, data: parseICMSWMMExport(content) };
+    case "icm-infoworks":
+      return { format, data: parseInfoWorksExport(content) };
     case "csv":
     default:
       return { format: format === "unknown" ? "csv" : format, data: parseCSVGeneric(content, file.name) };

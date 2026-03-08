@@ -17,7 +17,7 @@ import {
 } from "recharts";
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
 
-const ALLOWED_EXTENSIONS = [".csv", ".dat", ".inp", ".tsv", ".txt"];
+const ALLOWED_EXTENSIONS = [".csv", ".dat", ".inp", ".tsv", ".txt", ".prn"];
 const MAX_FILE_SIZE_MB = 50;
 const MAX_FILE_SIZE = MAX_FILE_SIZE_MB * 1024 * 1024;
 
@@ -138,7 +138,7 @@ export function DataImportTab({ onNext }: DataImportTabProps) {
       >
         <Upload className={`h-10 w-10 mx-auto mb-4 transition-colors ${dragOver ? "text-primary" : "text-muted-foreground"}`} />
         <p className="text-sm font-medium mb-1">
-          {dragOver ? "Drop files to import" : "Drag & drop CSV or SWMM5 files here"}
+          {dragOver ? "Drop files to import" : "Drag & drop CSV, SWMM5, ICM SWMM, or InfoWorks files"}
         </p>
         <p className="text-xs text-muted-foreground mb-4">
           Supports {ALLOWED_EXTENSIONS.join(", ")} formats (max {MAX_FILE_SIZE_MB}MB)

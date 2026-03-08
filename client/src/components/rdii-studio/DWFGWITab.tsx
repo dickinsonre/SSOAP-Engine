@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useCalibrationData } from "@/contexts/CalibrationDataContext";
+import { HelpTooltip } from "./HelpTooltip";
 import type { DWFResult } from "@/contexts/CalibrationDataContext";
 import {
   ComposedChart,
@@ -125,10 +126,13 @@ export function DWFGWITab({ onNext }: DWFGWITabProps) {
   return (
     <div className="space-y-6">
       <div className="flex justify-end">
-        <Button onClick={handleSeparate} disabled={running} data-testid="button-separate-dwf">
-          <Play className="mr-2 h-4 w-4" />
-          {running ? "Processing..." : "Separate DWF/GWI"}
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button onClick={handleSeparate} disabled={running} data-testid="button-separate-dwf">
+            <Play className="mr-2 h-4 w-4" />
+            {running ? "Processing..." : "Separate DWF/GWI"}
+          </Button>
+          <HelpTooltip text="Dry Weather Flow (DWF) is the normal sanitary flow without rainfall influence. Groundwater Infiltration (GWI) is the baseline flow from groundwater seeping into pipes. Separating these from total flow isolates the rainfall-dependent inflow (RDII)." />
+        </div>
       </div>
 
       {noDryDays && dwfResult && (
@@ -147,14 +151,20 @@ export function DWFGWITab({ onNext }: DWFGWITabProps) {
           <div className="grid gap-4 md:grid-cols-3">
             <Card>
               <CardContent className="pt-4">
-                <p className="text-xs text-muted-foreground">Mean DWF</p>
+                <div className="flex items-center gap-1">
+                  <p className="text-xs text-muted-foreground">Mean DWF</p>
+                  <HelpTooltip text="Average Dry Weather Flow computed from dry-day hourly patterns. Represents typical sanitary sewer flow without rain influence." />
+                </div>
                 <p className="text-2xl font-bold font-mono" data-testid="text-mean-dwf">{dwfResult.meanDWF.toFixed(3)}</p>
                 <p className="text-xs text-muted-foreground">{flowData.units}</p>
               </CardContent>
             </Card>
             <Card>
               <CardContent className="pt-4">
-                <p className="text-xs text-muted-foreground">Mean GWI</p>
+                <div className="flex items-center gap-1">
+                  <p className="text-xs text-muted-foreground">Mean GWI</p>
+                  <HelpTooltip text="Average Groundwater Infiltration estimated from minimum observed flows during dry weather. Represents persistent groundwater seepage into the sewer system." />
+                </div>
                 <p className="text-2xl font-bold font-mono" data-testid="text-mean-gwi">{dwfResult.meanGWI.toFixed(3)}</p>
                 <p className="text-xs text-muted-foreground">{flowData.units}</p>
               </CardContent>
