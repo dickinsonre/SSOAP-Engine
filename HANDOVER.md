@@ -24,6 +24,7 @@
 14. [Demo/Seed Data](#14-demoseed-data)
 15. [Dependencies & Package Manifest](#15-dependencies--package-manifest)
 16. [Configuration Files](#16-configuration-files)
+16a. [Theming & Color Scheme System](#16a-theming--color-scheme-system)
 17. [Build & Development](#17-build--development)
 18. [Known Issues & Bug Fixes Applied](#18-known-issues--bug-fixes-applied)
 19. [Testing & Validation](#19-testing--validation)
@@ -114,6 +115,8 @@ Browser (React SPA)
 
 6. **Local Timezone Consistency**: All date/time processing uses JavaScript's local time methods (`getFullYear()`, `getMonth()`, `getDate()`, `getHours()`) consistently. Never mix UTC (`toISOString()`) with local time methods.
 
+7. **Two-Dimensional Theming**: The app has two independent theme axes — a **mode** (light/dark/system) and a **color scheme** (7 palettes). Both are persisted in `localStorage` and applied via CSS classes and `data-color-scheme` attribute on `<html>`.
+
 ---
 
 ## 3. Directory Structure & File Map
@@ -128,12 +131,12 @@ ssoap-toolbox/
 │   ├── src/
 │   │   ├── App.tsx                  # Route definitions, layout shell
 │   │   ├── main.tsx                 # React entry point
-│   │   ├── index.css                # Global styles, CSS variables, theme
+│   │   ├── index.css                # Global styles, 7 color schemes, CSS variables (1051 lines)
 │   │   ├── components/
 │   │   │   ├── app-sidebar.tsx      # Navigation sidebar (227 lines)
 │   │   │   ├── ga-calibration-dialog.tsx  # Server-side GA dialog (706 lines)
 │   │   │   ├── icm-import-dialog.tsx      # ICM InfoWorks import (368 lines)
-│   │   │   ├── theme-provider.tsx   # Light/dark/system theme management
+│   │   │   ├── theme-provider.tsx   # Light/dark/system + 7 color scheme management
 │   │   │   ├── theme-toggle.tsx     # Theme switch UI
 │   │   │   ├── rdii-studio/         # RDII Studio tab components
 │   │   │   │   ├── DataImportTab.tsx    # Tab 1: File upload & sample data (224 lines)
@@ -167,7 +170,7 @@ ssoap-toolbox/
 │   │       ├── sso-events.tsx       # SSO event logging (566 lines)
 │   │       ├── rdii-studio.tsx      # RDII Studio 10-tab page (148 lines)
 │   │       ├── documents.tsx        # Document management (373 lines)
-│   │       ├── settings.tsx         # Theme & system settings (309 lines)
+│   │       ├── settings.tsx         # Theme & system settings (315 lines)
 │   │       └── not-found.tsx        # 404 page
 │   └── index.html                   # HTML entry point
 ├── server/
@@ -517,7 +520,7 @@ const response = await apiRequest("POST", "/api/projects", body);
 | `/sso-events` | `SSOEventsPage` | `pages/sso-events.tsx` | SSO event logging and analysis |
 | `/rdii-studio` | `RDIIStudioPage` | `pages/rdii-studio.tsx` | 10-tab RDII calibration workflow |
 | `/documents` | `DocumentsPage` | `pages/documents.tsx` | Document management |
-| `/settings` | `SettingsPage` | `pages/settings.tsx` | Theme config, system info |
+| `/settings` | `SettingsPage` | `pages/settings.tsx` | Theme mode, 7 color schemes, system info |
 | `*` (catch-all) | `NotFound` | `pages/not-found.tsx` | 404 error page |
 
 ### Sidebar Navigation Structure
@@ -1381,6 +1384,82 @@ The `MemStorage` constructor populates the following demo data for immediate tes
 - Style: default
 - Tailwind CSS variables: enabled
 - Component aliases: `@/components`, `@/lib`, `@/hooks`
+
+---
+
+## 16a. Theming & Color Scheme System
+
+The application supports a two-dimensional theming system:
+
+### Theme Mode (Light / Dark / System)
+
+- Managed by `ThemeProvider` in `client/src/components/theme-provider.tsx`
+- Applies `.light` or `.dark` class to `document.documentElement`
+- Quick toggle via `theme-toggle.tsx` dropdown (Sun/Moon/Monitor icons)
+- Persisted in `localStorage` key: `ssoap-ui-theme`
+
+### Color Schemes (7 Palettes)
+
+Applied via `data-color-scheme` attribute on `<html>`. Each scheme defines a complete set of CSS variables for both light and dark modes in `client/src/index.css`.
+
+| ID | Name | Primary Color | Description |
+|----|------|--------------|-------------|
+| `steel` | Steel Blue | `hsl(207, 85%, 42%)` | Default. Professional & balanced blue |
+| `ocean` | Ocean Blue | `hsl(215, 90%, 45%)` | Deep & rich blue tones |
+| `sky` | Sky Blue | `hsl(195, 85%, 48%)` | Light & vibrant blue |
+| `navy` | Navy Blue | `hsl(225, 75%, 38%)` | Classic & authoritative |
+| `epa` | EPA | `hsl(205, 80%, 37%)` — #0071BC | U.S. Environmental Protection Agency blue with green chart accents |
+| `uf` | UF Gators | `hsl(15, 95%, 53%)` — #FA4616 | University of Florida orange + blue (#0021A5) |
+| `osu` | OSU Beavers | `hsl(17, 90%, 44%)` — #D73F09 | Oregon State University orange + black |
+
+- Persisted in `localStorage` key: `ssoap-color-scheme`
+- The `ColorScheme` type is defined in **both** `theme-provider.tsx` and `settings.tsx` — these must stay in sync when adding/removing schemes
+
+### CSS Variable Coverage Per Scheme
+
+Each `data-color-scheme` block defines ~50 CSS variables covering:
+
+- Layout: `background`, `foreground`, `border`, `card`, `popover`
+- Sidebar: `sidebar`, `sidebar-primary`, `sidebar-accent`, `sidebar-ring`
+- Semantic: `primary`, `secondary`, `muted`, `accent`, `destructive`
+- Data viz: `chart-1` through `chart-5`
+- Elevation: `elevate-1`, `elevate-2`, `button-outline`, `badge-outline`
+- Typography: `font-sans`, `font-serif`, `font-mono`
+- Shadows: `shadow-2xs` through `shadow-2xl`
+
+### Brand Theme Details
+
+**EPA Theme** — Environmental protection aesthetic:
+- Primary: EPA Blue `#0071BC` (hsl 205, 80%, 37%)
+- Chart colors: Blue → green gradient (hues 205, 152, 180, 195, 140) evoking water/environment
+- Dark mode primary lightened to 44% for accessibility
+
+**UF Gators Theme** — University of Florida school colors:
+- Primary: Gator Orange `#FA4616` (hsl 15, 95%, 53%)
+- Chart-2: Gator Blue `#0021A5` (hsl 231, 90%, 38%)
+- Warm neutral backgrounds (hue 20-30) complement orange primary
+- White foreground on primary for contrast
+
+**OSU Beavers Theme** — Oregon State University school colors:
+- Primary: Beaver Orange `#D73F09` (hsl 17, 90%, 44%)
+- Chart-3: Near-black (hsl 0, 0%, 25%) representing OSU black
+- Chart colors: warm earth tones (oranges, ambers, reds)
+- Dark mode primary lightened to 48% for readability
+
+### Settings UI
+
+The Settings page (`/settings`) renders all 7 schemes in a 2-column grid of radio cards. Each card shows:
+- A colored preview swatch with an icon (Palette, Waves, Cloud, Anchor, Shield, GraduationCap, TreePine)
+- Scheme name and description
+- Selection highlight via `peer-data-[state=checked]:border-primary`
+
+### Adding a New Color Scheme
+
+1. Add the ID to the `ColorScheme` union type in `client/src/components/theme-provider.tsx`
+2. Add the same ID to the `ColorScheme` union type in `client/src/pages/settings.tsx`
+3. Add an entry to the `colorSchemes` array in `settings.tsx` with `id`, `name`, `description`, `icon`, `previewColor`
+4. Add `:root[data-color-scheme="<id>"]` and `.dark[data-color-scheme="<id>"]` blocks in `client/src/index.css` with all ~50 CSS variables
+5. Update `replit.md` and `HANDOVER.md` documentation
 
 ---
 
