@@ -112,3 +112,8 @@ The application supports light/dark/system modes via:
 - ThemeProvider component in `client/src/components/theme-provider.tsx`
 - Theme selection stored in localStorage
 - CSS variables defined in `client/src/index.css`
+- **Color Schemes**: 7 palettes applied via `data-color-scheme` attribute on `<html>`:
+  - Blue variants: `steel` (default), `ocean`, `sky`, `navy`
+  - Brand themes: `epa` (EPA blue #0071BC with green accents), `uf` (UF Gators orange #FA4616 + blue), `osu` (OSU Beavers orange #D73F09 + black)
+- Color scheme type defined in both `theme-provider.tsx` and `settings.tsx` — must stay in sync
+- Each scheme has full light + dark CSS variable sets in `index.css`

@@ -11,6 +11,9 @@ import {
   Waves,
   Cloud,
   Anchor,
+  Shield,
+  GraduationCap,
+  TreePine,
 } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -20,13 +23,16 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { useTheme } from "@/components/theme-provider";
 
-type ColorScheme = "steel" | "ocean" | "sky" | "navy";
+type ColorScheme = "steel" | "ocean" | "sky" | "navy" | "epa" | "uf" | "osu";
 
 const colorSchemes: { id: ColorScheme; name: string; description: string; icon: React.ElementType; previewColor: string }[] = [
   { id: "steel", name: "Steel Blue", description: "Professional & balanced", icon: Palette, previewColor: "bg-[hsl(207,85%,42%)]" },
   { id: "ocean", name: "Ocean Blue", description: "Deep & rich tones", icon: Waves, previewColor: "bg-[hsl(215,90%,45%)]" },
   { id: "sky", name: "Sky Blue", description: "Light & vibrant", icon: Cloud, previewColor: "bg-[hsl(195,85%,48%)]" },
   { id: "navy", name: "Navy Blue", description: "Classic & authoritative", icon: Anchor, previewColor: "bg-[hsl(225,75%,38%)]" },
+  { id: "epa", name: "EPA", description: "U.S. Environmental Protection Agency", icon: Shield, previewColor: "bg-[hsl(205,80%,37%)]" },
+  { id: "uf", name: "UF Gators", description: "University of Florida", icon: GraduationCap, previewColor: "bg-[hsl(15,95%,53%)]" },
+  { id: "osu", name: "OSU Beavers", description: "Oregon State University", icon: TreePine, previewColor: "bg-[hsl(17,90%,44%)]" },
 ];
 
 export default function SettingsPage() {
@@ -107,7 +113,7 @@ export default function SettingsPage() {
 
             <div className="space-y-3">
               <Label className="text-sm font-medium">Color Scheme</Label>
-              <p className="text-xs text-muted-foreground mb-2">Choose a blue color palette for the application</p>
+              <p className="text-xs text-muted-foreground mb-2">Choose a color palette for the application</p>
               <RadioGroup
                 value={colorScheme}
                 onValueChange={(value: ColorScheme) => setColorScheme(value)}

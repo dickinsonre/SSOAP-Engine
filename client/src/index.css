@@ -550,6 +550,384 @@
   --destructive-border: hsl(var(--destructive));
 }
 
+/* ========================================
+   EPA - U.S. Environmental Protection Agency
+   EPA Blue (#0071BC) = hsl(205, 80%, 37%)
+   EPA Green accent for charts
+   ======================================== */
+
+:root[data-color-scheme="epa"] {
+  --button-outline: rgba(0,0,0, .10);
+  --badge-outline: rgba(0,0,0, .05);
+  --opaque-button-border-intensity: -8;
+  --elevate-1: rgba(0,0,0, .03);
+  --elevate-2: rgba(0,0,0, .08);
+  --background: 200 18% 98%;
+  --foreground: 205 25% 12%;
+  --border: 200 14% 91%;
+  --card: 200 16% 96%;
+  --card-foreground: 205 25% 12%;
+  --card-border: 200 12% 93%;
+  --sidebar: 200 14% 93%;
+  --sidebar-foreground: 205 25% 12%;
+  --sidebar-border: 200 12% 89%;
+  --sidebar-primary: 205 80% 37%;
+  --sidebar-primary-foreground: 205 90% 98%;
+  --sidebar-accent: 200 12% 86%;
+  --sidebar-accent-foreground: 205 25% 15%;
+  --sidebar-ring: 205 80% 37%;
+  --popover: 200 16% 91%;
+  --popover-foreground: 205 25% 12%;
+  --popover-border: 200 12% 87%;
+  --primary: 205 80% 37%;
+  --primary-foreground: 205 90% 98%;
+  --secondary: 200 10% 84%;
+  --secondary-foreground: 205 25% 15%;
+  --muted: 200 10% 86%;
+  --muted-foreground: 200 14% 36%;
+  --accent: 200 12% 88%;
+  --accent-foreground: 205 25% 15%;
+  --destructive: 0 72% 42%;
+  --destructive-foreground: 0 85% 98%;
+  --input: 200 16% 74%;
+  --ring: 205 80% 37%;
+  --chart-1: 205 80% 37%;
+  --chart-2: 152 60% 36%;
+  --chart-3: 180 50% 34%;
+  --chart-4: 195 65% 40%;
+  --chart-5: 140 45% 32%;
+  --font-sans: 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-serif: Georgia, serif;
+  --font-mono: 'IBM Plex Mono', Menlo, monospace;
+  --radius: .5rem;
+  --shadow-2xs: 0px 2px 0px 0px hsl(205 18% 20% / 0.00);
+  --shadow-xs: 0px 2px 0px 0px hsl(205 18% 20% / 0.00);
+  --shadow-sm: 0px 2px 0px 0px hsl(205 18% 20% / 0.00), 0px 1px 2px -1px hsl(205 18% 20% / 0.00);
+  --shadow: 0px 2px 0px 0px hsl(205 18% 20% / 0.00), 0px 1px 2px -1px hsl(205 18% 20% / 0.00);
+  --shadow-md: 0px 2px 0px 0px hsl(205 18% 20% / 0.00), 0px 2px 4px -1px hsl(205 18% 20% / 0.00);
+  --shadow-lg: 0px 2px 0px 0px hsl(205 18% 20% / 0.00), 0px 4px 6px -1px hsl(205 18% 20% / 0.00);
+  --shadow-xl: 0px 2px 0px 0px hsl(205 18% 20% / 0.00), 0px 8px 10px -1px hsl(205 18% 20% / 0.00);
+  --shadow-2xl: 0px 2px 0px 0px hsl(205 18% 20% / 0.00);
+  --tracking-normal: 0em;
+  --spacing: 0.25rem;
+  --sidebar-primary-border: hsl(var(--sidebar-primary));
+  --sidebar-accent-border: hsl(var(--sidebar-accent));
+  --primary-border: hsl(var(--primary));
+  --secondary-border: hsl(var(--secondary));
+  --muted-border: hsl(var(--muted));
+  --accent-border: hsl(var(--accent));
+  --destructive-border: hsl(var(--destructive));
+}
+
+.dark[data-color-scheme="epa"] {
+  --button-outline: rgba(255,255,255, .10);
+  --badge-outline: rgba(255,255,255, .05);
+  --opaque-button-border-intensity: 9;
+  --elevate-1: rgba(255,255,255, .04);
+  --elevate-2: rgba(255,255,255, .09);
+  --background: 205 28% 7%;
+  --foreground: 200 18% 96%;
+  --border: 205 22% 15%;
+  --card: 205 26% 9%;
+  --card-foreground: 200 18% 96%;
+  --card-border: 205 20% 12%;
+  --sidebar: 205 26% 11%;
+  --sidebar-foreground: 200 18% 96%;
+  --sidebar-border: 205 20% 14%;
+  --sidebar-primary: 205 80% 48%;
+  --sidebar-primary-foreground: 205 90% 98%;
+  --sidebar-accent: 205 18% 15%;
+  --sidebar-accent-foreground: 200 18% 96%;
+  --sidebar-ring: 205 80% 48%;
+  --popover: 205 26% 13%;
+  --popover-foreground: 200 18% 96%;
+  --popover-border: 205 20% 16%;
+  --primary: 205 80% 44%;
+  --primary-foreground: 205 90% 98%;
+  --secondary: 205 16% 17%;
+  --secondary-foreground: 200 18% 96%;
+  --muted: 205 16% 15%;
+  --muted-foreground: 200 12% 68%;
+  --accent: 205 18% 13%;
+  --accent-foreground: 200 18% 96%;
+  --destructive: 0 72% 38%;
+  --destructive-foreground: 0 85% 98%;
+  --input: 205 18% 26%;
+  --ring: 205 80% 48%;
+  --chart-1: 205 80% 62%;
+  --chart-2: 152 55% 55%;
+  --chart-3: 180 50% 52%;
+  --chart-4: 195 60% 58%;
+  --chart-5: 140 45% 50%;
+  --shadow-2xs: 0px 2px 0px 0px hsl(205 18% 5% / 0.00);
+  --shadow-xs: 0px 2px 0px 0px hsl(205 18% 5% / 0.00);
+  --shadow-sm: 0px 2px 0px 0px hsl(205 18% 5% / 0.00), 0px 1px 2px -1px hsl(205 18% 5% / 0.00);
+  --shadow: 0px 2px 0px 0px hsl(205 18% 5% / 0.00), 0px 1px 2px -1px hsl(205 18% 5% / 0.00);
+  --shadow-md: 0px 2px 0px 0px hsl(205 18% 5% / 0.00), 0px 2px 4px -1px hsl(205 18% 5% / 0.00);
+  --shadow-lg: 0px 2px 0px 0px hsl(205 18% 5% / 0.00), 0px 4px 6px -1px hsl(205 18% 5% / 0.00);
+  --shadow-xl: 0px 2px 0px 0px hsl(205 18% 5% / 0.00), 0px 8px 10px -1px hsl(205 18% 5% / 0.00);
+  --shadow-2xl: 0px 2px 0px 0px hsl(205 18% 5% / 0.00);
+  --sidebar-primary-border: hsl(var(--sidebar-primary));
+  --sidebar-accent-border: hsl(var(--sidebar-accent));
+  --primary-border: hsl(var(--primary));
+  --secondary-border: hsl(var(--secondary));
+  --muted-border: hsl(var(--muted));
+  --accent-border: hsl(var(--accent));
+  --destructive-border: hsl(var(--destructive));
+}
+
+/* ========================================
+   UF GATORS - University of Florida
+   UF Orange (#FA4616) = hsl(15, 95%, 53%)
+   UF Blue (#0021A5) = hsl(231, 100%, 32%)
+   ======================================== */
+
+:root[data-color-scheme="uf"] {
+  --button-outline: rgba(0,0,0, .10);
+  --badge-outline: rgba(0,0,0, .05);
+  --opaque-button-border-intensity: -8;
+  --elevate-1: rgba(0,0,0, .03);
+  --elevate-2: rgba(0,0,0, .08);
+  --background: 30 20% 98%;
+  --foreground: 20 22% 12%;
+  --border: 25 14% 91%;
+  --card: 28 18% 96%;
+  --card-foreground: 20 22% 12%;
+  --card-border: 25 12% 93%;
+  --sidebar: 25 16% 93%;
+  --sidebar-foreground: 20 22% 12%;
+  --sidebar-border: 25 12% 89%;
+  --sidebar-primary: 15 95% 53%;
+  --sidebar-primary-foreground: 0 0% 100%;
+  --sidebar-accent: 25 14% 86%;
+  --sidebar-accent-foreground: 20 22% 15%;
+  --sidebar-ring: 15 95% 53%;
+  --popover: 28 16% 91%;
+  --popover-foreground: 20 22% 12%;
+  --popover-border: 25 12% 87%;
+  --primary: 15 95% 53%;
+  --primary-foreground: 0 0% 100%;
+  --secondary: 25 10% 84%;
+  --secondary-foreground: 20 22% 15%;
+  --muted: 25 10% 86%;
+  --muted-foreground: 20 14% 36%;
+  --accent: 25 14% 88%;
+  --accent-foreground: 20 22% 15%;
+  --destructive: 0 72% 42%;
+  --destructive-foreground: 0 85% 98%;
+  --input: 25 16% 74%;
+  --ring: 15 95% 53%;
+  --chart-1: 15 95% 53%;
+  --chart-2: 231 90% 38%;
+  --chart-3: 25 85% 48%;
+  --chart-4: 210 70% 45%;
+  --chart-5: 35 80% 42%;
+  --font-sans: 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-serif: Georgia, serif;
+  --font-mono: 'IBM Plex Mono', Menlo, monospace;
+  --radius: .5rem;
+  --shadow-2xs: 0px 2px 0px 0px hsl(20 16% 20% / 0.00);
+  --shadow-xs: 0px 2px 0px 0px hsl(20 16% 20% / 0.00);
+  --shadow-sm: 0px 2px 0px 0px hsl(20 16% 20% / 0.00), 0px 1px 2px -1px hsl(20 16% 20% / 0.00);
+  --shadow: 0px 2px 0px 0px hsl(20 16% 20% / 0.00), 0px 1px 2px -1px hsl(20 16% 20% / 0.00);
+  --shadow-md: 0px 2px 0px 0px hsl(20 16% 20% / 0.00), 0px 2px 4px -1px hsl(20 16% 20% / 0.00);
+  --shadow-lg: 0px 2px 0px 0px hsl(20 16% 20% / 0.00), 0px 4px 6px -1px hsl(20 16% 20% / 0.00);
+  --shadow-xl: 0px 2px 0px 0px hsl(20 16% 20% / 0.00), 0px 8px 10px -1px hsl(20 16% 20% / 0.00);
+  --shadow-2xl: 0px 2px 0px 0px hsl(20 16% 20% / 0.00);
+  --tracking-normal: 0em;
+  --spacing: 0.25rem;
+  --sidebar-primary-border: hsl(var(--sidebar-primary));
+  --sidebar-accent-border: hsl(var(--sidebar-accent));
+  --primary-border: hsl(var(--primary));
+  --secondary-border: hsl(var(--secondary));
+  --muted-border: hsl(var(--muted));
+  --accent-border: hsl(var(--accent));
+  --destructive-border: hsl(var(--destructive));
+}
+
+.dark[data-color-scheme="uf"] {
+  --button-outline: rgba(255,255,255, .10);
+  --badge-outline: rgba(255,255,255, .05);
+  --opaque-button-border-intensity: 9;
+  --elevate-1: rgba(255,255,255, .04);
+  --elevate-2: rgba(255,255,255, .09);
+  --background: 20 20% 7%;
+  --foreground: 25 16% 96%;
+  --border: 20 16% 15%;
+  --card: 20 18% 9%;
+  --card-foreground: 25 16% 96%;
+  --card-border: 20 14% 12%;
+  --sidebar: 20 18% 11%;
+  --sidebar-foreground: 25 16% 96%;
+  --sidebar-border: 20 14% 14%;
+  --sidebar-primary: 15 95% 53%;
+  --sidebar-primary-foreground: 0 0% 100%;
+  --sidebar-accent: 20 14% 15%;
+  --sidebar-accent-foreground: 25 16% 96%;
+  --sidebar-ring: 15 95% 53%;
+  --popover: 20 18% 13%;
+  --popover-foreground: 25 16% 96%;
+  --popover-border: 20 14% 16%;
+  --primary: 15 95% 53%;
+  --primary-foreground: 0 0% 100%;
+  --secondary: 20 12% 17%;
+  --secondary-foreground: 25 16% 96%;
+  --muted: 20 12% 15%;
+  --muted-foreground: 25 10% 68%;
+  --accent: 20 14% 13%;
+  --accent-foreground: 25 16% 96%;
+  --destructive: 0 72% 38%;
+  --destructive-foreground: 0 85% 98%;
+  --input: 20 14% 26%;
+  --ring: 15 95% 53%;
+  --chart-1: 15 95% 60%;
+  --chart-2: 231 80% 62%;
+  --chart-3: 25 85% 58%;
+  --chart-4: 210 65% 60%;
+  --chart-5: 35 75% 55%;
+  --shadow-2xs: 0px 2px 0px 0px hsl(20 16% 5% / 0.00);
+  --shadow-xs: 0px 2px 0px 0px hsl(20 16% 5% / 0.00);
+  --shadow-sm: 0px 2px 0px 0px hsl(20 16% 5% / 0.00), 0px 1px 2px -1px hsl(20 16% 5% / 0.00);
+  --shadow: 0px 2px 0px 0px hsl(20 16% 5% / 0.00), 0px 1px 2px -1px hsl(20 16% 5% / 0.00);
+  --shadow-md: 0px 2px 0px 0px hsl(20 16% 5% / 0.00), 0px 2px 4px -1px hsl(20 16% 5% / 0.00);
+  --shadow-lg: 0px 2px 0px 0px hsl(20 16% 5% / 0.00), 0px 4px 6px -1px hsl(20 16% 5% / 0.00);
+  --shadow-xl: 0px 2px 0px 0px hsl(20 16% 5% / 0.00), 0px 8px 10px -1px hsl(20 16% 5% / 0.00);
+  --shadow-2xl: 0px 2px 0px 0px hsl(20 16% 5% / 0.00);
+  --sidebar-primary-border: hsl(var(--sidebar-primary));
+  --sidebar-accent-border: hsl(var(--sidebar-accent));
+  --primary-border: hsl(var(--primary));
+  --secondary-border: hsl(var(--secondary));
+  --muted-border: hsl(var(--muted));
+  --accent-border: hsl(var(--accent));
+  --destructive-border: hsl(var(--destructive));
+}
+
+/* ========================================
+   OSU BEAVERS - Oregon State University
+   OSU Orange (#D73F09) = hsl(17, 90%, 44%)
+   OSU Black (#000000) for contrast
+   ======================================== */
+
+:root[data-color-scheme="osu"] {
+  --button-outline: rgba(0,0,0, .10);
+  --badge-outline: rgba(0,0,0, .05);
+  --opaque-button-border-intensity: -8;
+  --elevate-1: rgba(0,0,0, .03);
+  --elevate-2: rgba(0,0,0, .08);
+  --background: 20 12% 98%;
+  --foreground: 15 18% 12%;
+  --border: 18 10% 91%;
+  --card: 18 12% 96%;
+  --card-foreground: 15 18% 12%;
+  --card-border: 18 8% 93%;
+  --sidebar: 15 10% 92%;
+  --sidebar-foreground: 15 18% 12%;
+  --sidebar-border: 15 8% 88%;
+  --sidebar-primary: 17 90% 44%;
+  --sidebar-primary-foreground: 0 0% 100%;
+  --sidebar-accent: 18 8% 85%;
+  --sidebar-accent-foreground: 15 18% 15%;
+  --sidebar-ring: 17 90% 44%;
+  --popover: 18 12% 90%;
+  --popover-foreground: 15 18% 12%;
+  --popover-border: 18 8% 86%;
+  --primary: 17 90% 44%;
+  --primary-foreground: 0 0% 100%;
+  --secondary: 18 6% 83%;
+  --secondary-foreground: 15 18% 15%;
+  --muted: 18 6% 86%;
+  --muted-foreground: 15 10% 38%;
+  --accent: 18 8% 88%;
+  --accent-foreground: 15 18% 15%;
+  --destructive: 0 72% 42%;
+  --destructive-foreground: 0 85% 98%;
+  --input: 18 10% 74%;
+  --ring: 17 90% 44%;
+  --chart-1: 17 90% 44%;
+  --chart-2: 30 75% 40%;
+  --chart-3: 0 0% 25%;
+  --chart-4: 40 65% 45%;
+  --chart-5: 10 80% 38%;
+  --font-sans: 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-serif: Georgia, serif;
+  --font-mono: 'IBM Plex Mono', Menlo, monospace;
+  --radius: .5rem;
+  --shadow-2xs: 0px 2px 0px 0px hsl(15 12% 20% / 0.00);
+  --shadow-xs: 0px 2px 0px 0px hsl(15 12% 20% / 0.00);
+  --shadow-sm: 0px 2px 0px 0px hsl(15 12% 20% / 0.00), 0px 1px 2px -1px hsl(15 12% 20% / 0.00);
+  --shadow: 0px 2px 0px 0px hsl(15 12% 20% / 0.00), 0px 1px 2px -1px hsl(15 12% 20% / 0.00);
+  --shadow-md: 0px 2px 0px 0px hsl(15 12% 20% / 0.00), 0px 2px 4px -1px hsl(15 12% 20% / 0.00);
+  --shadow-lg: 0px 2px 0px 0px hsl(15 12% 20% / 0.00), 0px 4px 6px -1px hsl(15 12% 20% / 0.00);
+  --shadow-xl: 0px 2px 0px 0px hsl(15 12% 20% / 0.00), 0px 8px 10px -1px hsl(15 12% 20% / 0.00);
+  --shadow-2xl: 0px 2px 0px 0px hsl(15 12% 20% / 0.00);
+  --tracking-normal: 0em;
+  --spacing: 0.25rem;
+  --sidebar-primary-border: hsl(var(--sidebar-primary));
+  --sidebar-accent-border: hsl(var(--sidebar-accent));
+  --primary-border: hsl(var(--primary));
+  --secondary-border: hsl(var(--secondary));
+  --muted-border: hsl(var(--muted));
+  --accent-border: hsl(var(--accent));
+  --destructive-border: hsl(var(--destructive));
+}
+
+.dark[data-color-scheme="osu"] {
+  --button-outline: rgba(255,255,255, .10);
+  --badge-outline: rgba(255,255,255, .05);
+  --opaque-button-border-intensity: 9;
+  --elevate-1: rgba(255,255,255, .04);
+  --elevate-2: rgba(255,255,255, .09);
+  --background: 15 15% 6%;
+  --foreground: 18 10% 96%;
+  --border: 15 12% 14%;
+  --card: 15 14% 8%;
+  --card-foreground: 18 10% 96%;
+  --card-border: 15 10% 11%;
+  --sidebar: 15 14% 10%;
+  --sidebar-foreground: 18 10% 96%;
+  --sidebar-border: 15 10% 13%;
+  --sidebar-primary: 17 90% 50%;
+  --sidebar-primary-foreground: 0 0% 100%;
+  --sidebar-accent: 15 10% 14%;
+  --sidebar-accent-foreground: 18 10% 96%;
+  --sidebar-ring: 17 90% 50%;
+  --popover: 15 14% 12%;
+  --popover-foreground: 18 10% 96%;
+  --popover-border: 15 10% 15%;
+  --primary: 17 90% 48%;
+  --primary-foreground: 0 0% 100%;
+  --secondary: 15 8% 16%;
+  --secondary-foreground: 18 10% 96%;
+  --muted: 15 8% 14%;
+  --muted-foreground: 18 8% 66%;
+  --accent: 15 10% 12%;
+  --accent-foreground: 18 10% 96%;
+  --destructive: 0 72% 38%;
+  --destructive-foreground: 0 85% 98%;
+  --input: 15 10% 24%;
+  --ring: 17 90% 50%;
+  --chart-1: 17 90% 58%;
+  --chart-2: 30 70% 55%;
+  --chart-3: 0 0% 55%;
+  --chart-4: 40 60% 55%;
+  --chart-5: 10 75% 52%;
+  --shadow-2xs: 0px 2px 0px 0px hsl(15 10% 4% / 0.00);
+  --shadow-xs: 0px 2px 0px 0px hsl(15 10% 4% / 0.00);
+  --shadow-sm: 0px 2px 0px 0px hsl(15 10% 4% / 0.00), 0px 1px 2px -1px hsl(15 10% 4% / 0.00);
+  --shadow: 0px 2px 0px 0px hsl(15 10% 4% / 0.00), 0px 1px 2px -1px hsl(15 10% 4% / 0.00);
+  --shadow-md: 0px 2px 0px 0px hsl(15 10% 4% / 0.00), 0px 2px 4px -1px hsl(15 10% 4% / 0.00);
+  --shadow-lg: 0px 2px 0px 0px hsl(15 10% 4% / 0.00), 0px 4px 6px -1px hsl(15 10% 4% / 0.00);
+  --shadow-xl: 0px 2px 0px 0px hsl(15 10% 4% / 0.00), 0px 8px 10px -1px hsl(15 10% 4% / 0.00);
+  --shadow-2xl: 0px 2px 0px 0px hsl(15 10% 4% / 0.00);
+  --sidebar-primary-border: hsl(var(--sidebar-primary));
+  --sidebar-accent-border: hsl(var(--sidebar-accent));
+  --primary-border: hsl(var(--primary));
+  --secondary-border: hsl(var(--secondary));
+  --muted-border: hsl(var(--muted));
+  --accent-border: hsl(var(--accent));
+  --destructive-border: hsl(var(--destructive));
+}
+
 @layer base {
   * {
     @apply border-border;

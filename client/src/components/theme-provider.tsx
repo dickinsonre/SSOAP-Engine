@@ -1,7 +1,7 @@
 import { createContext, useContext, useEffect, useState } from "react";
 
 type Theme = "dark" | "light" | "system";
-type ColorScheme = "steel" | "ocean" | "sky" | "navy";
+type ColorScheme = "steel" | "ocean" | "sky" | "navy" | "epa" | "uf" | "osu";
 
 type ThemeProviderProps = {
   children: React.ReactNode;
