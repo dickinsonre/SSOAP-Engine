@@ -14,10 +14,13 @@ import {
   Circle,
   Lock,
   ArrowRight,
+  HelpCircle,
 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
+import { Button } from "@/components/ui/button";
 import { CalibrationDataProvider, useCalibrationData } from "@/contexts/CalibrationDataContext";
+import { InteractiveTutorial, useTutorialState } from "@/components/rdii-studio/InteractiveTutorial";
 import { DataImportTab } from "@/components/rdii-studio/DataImportTab";
 import { QAQCTab } from "@/components/rdii-studio/QAQCTab";
 import { DWFGWITab } from "@/components/rdii-studio/DWFGWITab";
@@ -161,15 +164,33 @@ function WorkflowProgressTracker({ activeTab, onTabChange }: { activeTab: string
 
 function RDIIStudioContent() {
   const [activeTab, setActiveTab] = useState("data");
+  const { showTutorial, openTutorial, closeTutorial } = useTutorialState();
 
   return (
     <div className="p-6 space-y-4">
-      <div>
-        <h1 className="text-2xl font-semibold" data-testid="text-rdii-studio-title">RDII Studio</h1>
-        <p className="text-sm text-muted-foreground">
-          Complete RDII calibration workflow — Import, QA/QC, Separate, Calibrate, Export
-        </p>
+      <div className="flex items-start justify-between gap-4 flex-wrap">
+        <div>
+          <h1 className="text-2xl font-semibold" data-testid="text-rdii-studio-title">RDII Studio</h1>
+          <p className="text-sm text-muted-foreground">
+            Complete RDII calibration workflow — Import, QA/QC, Separate, Calibrate, Export
+          </p>
+        </div>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={openTutorial}
+          data-testid="button-show-tutorial"
+        >
+          <HelpCircle className="h-4 w-4 mr-1.5" />
+          Show Tutorial
+        </Button>
       </div>
+
+      <InteractiveTutorial
+        open={showTutorial}
+        onClose={closeTutorial}
+        onNavigateToTab={setActiveTab}
+      />
 
       <WorkflowProgressTracker activeTab={activeTab} onTabChange={setActiveTab} />
 

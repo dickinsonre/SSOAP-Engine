@@ -105,6 +105,12 @@ The application includes seeded demo data for immediate testing:
 - **Ecosystem Connections**: 4 external link buttons in Export tab (INP MAKER, Rain Canvas, SWMM5 Engine, BatchSWMM)
 - **Calibration Tournament**: Side-by-side GA vs NSGA-II comparison with metrics table, hydrograph overlay, and auto-verdict
 - **Convolution Visualizer**: Animated RTK convolution in Time Series tab with play/pause/speed controls, showing fast/medium/slow RDII building up
+- **Interactive Tutorial**: First-visit guided tour with 6 steps covering the RDII workflow; stored in localStorage; replay via "Show Tutorial" button
+- **Report Generator**: HTML calibration report download with RTK parameters, metrics, performance ratings, and SWMM5 input format
+- **Model Validation Dashboard**: Goodness-of-fit metrics (NSE, PBIAS, R², RMSE, MAE) with Moriasi 2007 color-coded performance badges, residual histogram, residuals-vs-time chart
+- **Parameter Correlation Matrix**: Heatmap of pairwise Pearson correlations between R1-K3 across all Pareto solutions, with red/blue color coding
+- **Brush Zoom/Pan**: Recharts Brush component on all major hydrograph charts (DataImport, Calibrate, Compare, TimeSeries) for interactive range selection
+- **Enhanced Drag-and-Drop**: File validation (type check, 50MB size limit), visual feedback (scale, shadow), error/success messages
 - New server endpoint: `POST /api/calibration/run-direct` accepts raw rainfall/observed arrays for tournament GA
 
 ## Development Notes

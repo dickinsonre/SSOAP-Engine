@@ -1,4 +1,6 @@
 import { GitCompare, ArrowRight } from "lucide-react";
+import { ModelValidationDashboard } from "./ModelValidationDashboard";
+import { ParameterCorrelationMatrix } from "./ParameterCorrelationMatrix";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -21,6 +23,7 @@ import {
   CartesianGrid,
   ResponsiveContainer,
   Legend,
+  Brush,
 } from "recharts";
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
 
@@ -162,12 +165,17 @@ export function CompareTab({ onNext }: CompareTabProps) {
                       name={r.label || `Solution ${i + 1}`}
                     />
                   ))}
+                  <Brush dataKey="idx" height={20} stroke="hsl(var(--primary))" travellerWidth={8} />
                 </ComposedChart>
               </ResponsiveContainer>
             </ChartContainer>
           </CardContent>
         </Card>
       )}
+
+      <ModelValidationDashboard />
+
+      <ParameterCorrelationMatrix />
 
       {onNext && (
         <div className="flex justify-end">

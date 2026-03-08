@@ -11,6 +11,7 @@ import {
   CartesianGrid,
   ResponsiveContainer,
   Legend,
+  Brush,
 } from "recharts";
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
 import { ConvolutionVisualizer } from "./ConvolutionVisualizer";
@@ -119,6 +120,7 @@ export function TimeSeriesTab({ onNext }: TimeSeriesTabProps) {
                 <Area type="monotone" dataKey="gwi" stackId="1" stroke="hsl(var(--chart-4))" fill="hsl(var(--chart-4))" fillOpacity={0.6} name="GWI" />
                 <Area type="monotone" dataKey="dwf" stackId="1" stroke="hsl(var(--chart-2))" fill="hsl(var(--chart-2))" fillOpacity={0.5} name="DWF" />
                 <Area type="monotone" dataKey="rdii" stackId="1" stroke="hsl(var(--chart-3))" fill="hsl(var(--chart-3))" fillOpacity={0.5} name="RDII" />
+                <Brush dataKey="time" height={20} stroke="hsl(var(--primary))" travellerWidth={8} />
               </AreaChart>
             </ResponsiveContainer>
           </ChartContainer>

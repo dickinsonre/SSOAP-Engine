@@ -26,6 +26,7 @@ import {
   ResponsiveContainer,
   Legend,
   LineChart,
+  Brush,
 } from "recharts";
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
 import { apiRequest } from "@/lib/queryClient";
@@ -635,6 +636,7 @@ export function CalibrateTab({ onNext }: CalibrateTabProps) {
                       <Legend />
                       <Area type="monotone" dataKey="observed" stroke="hsl(var(--chart-1))" fill="hsl(var(--chart-1))" fillOpacity={0.15} strokeWidth={1.5} name="Observed" />
                       <Line type="monotone" dataKey="simulated" stroke="hsl(var(--chart-3))" strokeWidth={2} dot={false} name="Simulated" />
+                      <Brush dataKey="idx" height={20} stroke="hsl(var(--primary))" travellerWidth={8} />
                     </ComposedChart>
                   </ResponsiveContainer>
                 </ChartContainer>
@@ -796,6 +798,7 @@ export function CalibrateTab({ onNext }: CalibrateTabProps) {
                             {tournament.nsgaii && (
                               <Line type="monotone" dataKey="nsgaii" stroke="hsl(var(--chart-3))" strokeWidth={2} dot={false} name="NSGA-II (Client)" />
                             )}
+                            <Brush dataKey="idx" height={20} stroke="hsl(var(--primary))" travellerWidth={8} />
                           </ComposedChart>
                         </ResponsiveContainer>
                       </ChartContainer>

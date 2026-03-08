@@ -1,0 +1,881 @@
+# RDII Studio — Project Handover Document
+
+> **App Name:** RDII Studio  
+> **Tagline:** Based on InfoSWMM RDII Analyst, EPA SSOAP, Customers  
+> **Published URL:** https://rdii-studio-pro.lovable.app  
+> **Generated:** 2026-02-12 | **Last Updated:** 2026-03-08  
+> **Platform:** Lovable (React + Vite + TypeScript + Tailwind CSS + Supabase/Lovable Cloud)
+
+---
+
+## Table of Contents
+
+1. [Project Overview](#1-project-overview)
+2. [Domain Background](#2-domain-background)
+3. [Technology Stack](#3-technology-stack)
+4. [Architecture Overview](#4-architecture-overview)
+5. [Directory Structure](#5-directory-structure)
+6. [Routing & Pages](#6-routing--pages)
+7. [Authentication](#7-authentication)
+8. [State Management](#8-state-management)
+9. [UI Layout & Tab System](#9-ui-layout--tab-system)
+10. [Feature Tabs — Detailed Breakdown](#10-feature-tabs--detailed-breakdown)
+11. [Core Components](#11-core-components)
+12. [File Format Parsers](#12-file-format-parsers)
+13. [Sample Data](#13-sample-data)
+14. [Database Schema](#14-database-schema)
+15. [Edge Functions (Serverless Backend)](#15-edge-functions-serverless-backend)
+16. [Python Modules (Reference/Offline)](#16-python-modules-referenceoffline)
+17. [Design System](#17-design-system)
+18. [Dependencies](#18-dependencies)
+19. [Environment Variables & Secrets](#19-environment-variables--secrets)
+20. [Known Limitations & TODOs](#20-known-limitations--todos)
+21. [Reproducing the Project](#21-reproducing-the-project)
+
+---
+
+## 1. Project Overview
+
+RDII Studio is a web-based tool for **Rainfall-Derived Infiltration and Inflow (RDII)** analysis of sanitary sewer systems. It guides engineers through a complete workflow:
+
+1. **Import** flow and rainfall time series data (SWMM5, ICM SWMM, ICM InfoWorks, CSV)
+2. **QA/QC** the data for quality issues
+3. **Separate** Dry Weather Flow (DWF) and Groundwater Infiltration (GWI)
+4. **Generate** an observed RDII series
+5. **Detect & classify** storm events
+6. **Calibrate** RTK parameters using multi-objective optimization (NSGA-II)
+7. **Compare** calibration scenarios
+8. **Analyze** time series decomposition
+9. **Export** results to InfoWorks ICM format
+10. **Documentation** with interactive tutorials
+
+The app persists calibration results to a cloud database and supports user authentication.
+
+---
+
+## 2. Domain Background
+
+### What is RDII?
+RDII is stormwater that enters sanitary sewer systems during rainfall via:
+- **Inflow** (direct connections like roof drains)
+- **Infiltration** (groundwater seeping through pipe joints/cracks)
+
+### The RTK Method
+The RTK method models RDII using **three triangular unit hydrographs**, each with 3 parameters (9 total):
+
+| Component | R (Response Ratio) | T (Time to Peak, hrs) | K (Recession Constant) |
+|-----------|-------------------|----------------------|----------------------|
+| **Fast (1)** | R1 (0–1) | T1 | K1 |
+| **Medium (2)** | R2 (0–1) | T2 > T1 | K2 > K1 |
+| **Slow (3)** | R3 (0–1) | T3 > T2 | K3 > K2 |
+
+**Constraints:** R1 + R2 + R3 ≤ 1, T1 < T2 < T3, K1 < K2 < K3
+
+### Calibration Objectives (minimized simultaneously)
+1. RMSE (Root Mean Square Error)
+2. Volume Bias (%)
+3. Peak Flow Error (%)
+4. Peak Timing Error
+
+---
+
+## 3. Technology Stack
+
+| Layer | Technology |
+|-------|-----------|
+| **Framework** | React 18.3 + TypeScript |
+| **Build Tool** | Vite |
+| **Styling** | Tailwind CSS + shadcn/ui components |
+| **Charts** | Recharts (with Brush for zoom/pan) |
+| **3D Visualization** | React Three Fiber + Three.js + Drei |
+| **State Management** | React Context (`CalibrationDataContext`) |
+| **Server State** | TanStack React Query |
+| **Routing** | React Router DOM v6 |
+| **Backend** | Lovable Cloud (Supabase) — Auth, Database, Edge Functions |
+| **AI Integration** | Lovable AI Gateway (Gemini 2.5 Flash) |
+| **Document Export** | docx, jspdf, html2canvas |
+| **Notifications** | Sonner + shadcn Toast |
+
+---
+
+## 4. Architecture Overview
+
+```
+┌─────────────────────────────────────────────────────────┐
+│                     Browser (SPA)                       │
+│                                                         │
+│  ┌─────────┐  ┌──────────────────┐  ┌───────────────┐  │
+│  │  Auth    │  │  Index Page      │  │  Projects     │  │
+│  │  Page    │  │  (10-tab layout) │  │  Page         │  │
+│  └────┬────┘  └────────┬─────────┘  └───────┬───────┘  │
+│       │                │                     │          │
+│       └────────────────┼─────────────────────┘          │
+│                        │                                │
+│          ┌─────────────┴──────────────┐                 │
+│          │  CalibrationDataContext     │                 │
+│          │  (flow, rainfall, events,  │                 │
+│          │   optimization results)    │                 │
+│          └─────────────┬──────────────┘                 │
+│                        │                                │
+│          ┌─────────────┴──────────────┐                 │
+│          │  Supabase Client           │                 │
+│          │  (@/integrations/supabase)  │                 │
+│          └─────────────┬──────────────┘                 │
+└────────────────────────┼────────────────────────────────┘
+                         │ HTTPS
+┌────────────────────────┼────────────────────────────────┐
+│              Lovable Cloud (Supabase)                   │
+│                        │                                │
+│  ┌──────────┐  ┌───────┴────────┐  ┌────────────────┐  │
+│  │  Auth    │  │  PostgreSQL    │  │ Edge Functions  │  │
+│  │  (email) │  │  (calibration_ │  │ • optimize-rtk  │  │
+│  │          │  │   history)     │  │ • suggest-params│  │
+│  └──────────┘  └────────────────┘  └───────┬────────┘  │
+│                                            │           │
+│                                   ┌────────┴────────┐  │
+│                                   │ Lovable AI      │  │
+│                                   │ Gateway         │  │
+│                                   │ (Gemini 2.5)    │  │
+│                                   └─────────────────┘  │
+└─────────────────────────────────────────────────────────┘
+```
+
+---
+
+## 5. Directory Structure
+
+```
+rdii-studio/
+├── public/
+│   ├── sample-data/
+│   │   ├── flow-data.csv          # 3-day hourly flow (MGD), includes storm event on day 3
+│   │   ├── rainfall-data.csv      # 3-day hourly rainfall (inches), storm on day 3
+│   │   └── README.md
+│   ├── favicon.ico
+│   ├── placeholder.svg
+│   └── robots.txt
+├── python/                         # Reference Python modules (NOT executed in browser)
+│   ├── bayes_uncertainty.py        # Bayesian MCMC uncertainty quantification
+│   ├── identifiability.py          # Parameter identifiability analysis
+│   ├── rdii_mo_nsga2.py           # Core NSGA-II optimization
+│   ├── roi_dashboard.py           # ROI/cost-benefit analysis
+│   └── storm_classes.py           # Storm event classification (K-means)
+├── src/
+│   ├── components/
+│   │   ├── tabs/                   # Main workflow tab components
+│   │   │   ├── DataImportTab.tsx   # File upload with drag-drop, format detection
+│   │   │   ├── QAQCTab.tsx         # Data quality checks
+│   │   │   ├── DWFGWITab.tsx       # Dry weather flow separation
+│   │   │   ├── RDIISeriesTab.tsx   # RDII series generation
+│   │   │   ├── EventsTab.tsx       # Storm event detection/management
+│   │   │   ├── CalibrateTab.tsx    # RTK calibration with NSGA-II
+│   │   │   ├── CompareTab.tsx      # Side-by-side scenario comparison
+│   │   │   ├── TimeSeriesTab.tsx   # Time series decomposition
+│   │   │   ├── ExportTab.tsx       # Export to ICM format
+│   │   │   └── DocsTab.tsx         # Documentation & tutorials (460 lines — consider refactoring)
+│   │   ├── wizard/                 # Calibration wizard steps
+│   │   │   ├── EventDetectionStep.tsx
+│   │   │   ├── RTKOptimizationStep.tsx
+│   │   │   └── SWMM5ExportStep.tsx
+│   │   ├── ui/                     # shadcn/ui components (40+ components)
+│   │   ├── AutoConstraintDetector.tsx
+│   │   ├── CalibrationProjectManager.tsx  # CRUD for saved calibrations
+│   │   ├── CalibrationWizard.tsx
+│   │   ├── DataQualityChecks.tsx
+│   │   ├── HelpTooltip.tsx
+│   │   ├── HydrographVisualization.tsx
+│   │   ├── InteractiveTutorial.tsx        # First-visit guided tour
+│   │   ├── Layout.tsx                     # Main layout with 10-tab navigation
+│   │   ├── MLParameterSuggestion.tsx      # AI-powered parameter suggestions
+│   │   ├── ModelValidationDashboard.tsx
+│   │   ├── ParameterCorrelationMatrix.tsx
+│   │   ├── ParetoSurface3D.tsx            # 3D Pareto front visualization
+│   │   ├── ReportGenerator.tsx            # PDF/DOCX report generation
+│   │   ├── SampleDataAnalysis.tsx
+│   │   └── TimeSeriesOverview.tsx         # Interactive time series charts
+│   ├── contexts/
+│   │   └── CalibrationDataContext.tsx      # Global state for calibration data
+│   ├── hooks/
+│   │   ├── useAuth.tsx                    # Authentication hook
+│   │   ├── use-mobile.tsx                 # Responsive detection
+│   │   └── use-toast.ts
+│   ├── integrations/supabase/             # AUTO-GENERATED — do not edit
+│   │   ├── client.ts
+│   │   └── types.ts
+│   ├── lib/
+│   │   ├── fileFormatParsers.ts           # SWMM5, ICM SWMM, InfoWorks, CSV parsers
+│   │   └── utils.ts                       # cn() utility
+│   ├── pages/
+│   │   ├── Index.tsx                      # Main app page (authenticated)
+│   │   ├── Auth.tsx                       # Login/signup page
+│   │   ├── Projects.tsx                   # Calibration project manager
+│   │   └── NotFound.tsx
+│   ├── App.tsx                            # Root component with routing
+│   ├── App.css
+│   ├── index.css                          # Design system tokens (HSL)
+│   └── main.tsx                           # Entry point
+├── supabase/
+│   ├── functions/
+│   │   ├── optimize-rtk/index.ts          # NSGA-II optimization via AI
+│   │   └── suggest-parameters/index.ts    # ML parameter suggestion via AI + DB
+│   └── config.toml                        # Supabase project config (auto-managed)
+├── tailwind.config.ts
+├── vite.config.ts
+├── tsconfig.json / tsconfig.app.json / tsconfig.node.json
+├── components.json                        # shadcn/ui config
+├── eslint.config.js
+├── postcss.config.js
+└── index.html
+```
+
+---
+
+## 6. Routing & Pages
+
+### App.tsx — Root Component
+
+```tsx
+// Providers (outermost to innermost):
+// QueryClientProvider → CalibrationDataProvider → TooltipProvider → BrowserRouter
+const App = () => (
+  <QueryClientProvider client={queryClient}>
+    <CalibrationDataProvider>
+      <TooltipProvider>
+        <Toaster />      {/* shadcn toast */}
+        <Sonner />       {/* sonner toast */}
+        <BrowserRouter>
+          <Routes>
+            <Route path="/" element={<Index />} />
+            <Route path="/auth" element={<Auth />} />
+            <Route path="/projects" element={<Projects />} />
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </BrowserRouter>
+      </TooltipProvider>
+    </CalibrationDataProvider>
+  </QueryClientProvider>
+);
+```
+
+| Route | Page | Auth Required | Description |
+|-------|------|:---:|-------------|
+| `/` | `Index.tsx` | ✅ | Main application with 10-tab workflow |
+| `/auth` | `Auth.tsx` | ❌ | Login / signup form |
+| `/projects` | `Projects.tsx` | ❌ | Calibration project manager (CRUD) |
+| `*` | `NotFound.tsx` | ❌ | 404 page |
+
+**Auth flow:** `Index.tsx` checks `useAuth()` → redirects to `/auth` if no user. After login, navigates to `/`.
+
+---
+
+## 7. Authentication
+
+- **Provider:** Supabase Auth (email + password)
+- **Hook:** `src/hooks/useAuth.tsx`
+  - Returns: `{ user, session, loading, signOut }`
+  - Listens to `onAuthStateChange` for reactive updates
+- **Signup:** Email confirmation required (auto-confirm is OFF)
+- **Session:** Managed by Supabase client, persisted in localStorage
+
+---
+
+## 8. State Management
+
+### CalibrationDataContext (`src/contexts/CalibrationDataContext.tsx`)
+
+Global React Context providing:
+
+```typescript
+interface CalibrationDataContextType {
+  flowData: ParsedTimeSeriesData | null;         // Imported flow time series
+  rainfallData: ParsedTimeSeriesData | null;     // Imported rainfall time series
+  detectedEvents: DetectedEvent[];               // Storm events
+  optimizationResults: OptimizationResult[];     // NSGA-II Pareto solutions
+  selectedSolutionIndex: number;                 // Currently selected solution
+  // + setters for all above
+}
+```
+
+**Auto-load behavior:** On mount, fetches `/sample-data/flow-data.csv` and `/sample-data/rainfall-data.csv`, parses them, and sets as initial data so users see something immediately.
+
+### Key Data Types
+
+```typescript
+interface ParsedTimeSeriesData {
+  timestamps: Date[];
+  values: number[];
+  units: string;           // e.g., "MGD", "in"
+  seriesName: string;
+  format: string;          // "swmm5" | "icm-swmm" | "icm-infoworks" | "csv"
+  metadata?: Record<string, any>;
+}
+
+interface DetectedEvent {
+  id: number;
+  startDate: string;
+  endDate: string;
+  rainDepth: number;
+  rdiiVolume: number;
+  peakRDII: number;
+  duration: number;
+  selected: boolean;
+}
+
+interface OptimizationResult {
+  parameters: { R1, T1, K1, R2, T2, K2, R3, T3, K3: number };
+  rmse: number;
+  volumeError: number;
+  peakError: number;
+  nse: number;
+  simulatedFlow?: number[];
+}
+```
+
+---
+
+## 9. UI Layout & Tab System
+
+**Layout component** (`src/components/Layout.tsx`):
+- Sticky header with gradient logo + logout button
+- 10-column `TabsList` grid for workflow navigation
+- Active tab uses gradient styling (`from-primary to-accent`)
+- Background: `bg-gradient-to-br from-background via-background to-muted/30`
+
+**Tabs (in workflow order):**
+
+| Tab Value | Label | Component |
+|-----------|-------|-----------|
+| `data` | Data Import | `DataImportTab` + `TimeSeriesOverview` |
+| `qaqc` | QA/QC | `QAQCTab` |
+| `dwf` | DWF & GWI | `DWFGWITab` |
+| `rdii` | RDII Series | `RDIISeriesTab` |
+| `events` | Events | `EventsTab` |
+| `calibrate` | Calibrate | `CalibrateTab` |
+| `compare` | Compare | `CompareTab` |
+| `timeseries` | Time Series | `TimeSeriesTab` |
+| `export` | Export to ICM | `ExportTab` |
+| `docs` | Docs & Code | `DocsTab` |
+
+---
+
+## 10. Feature Tabs — Detailed Breakdown
+
+### DataImportTab
+- Drag-and-drop file upload with visual feedback
+- Auto-detects SWMM5, ICM SWMM, ICM InfoWorks, and CSV formats
+- File validation (max 50MB, allowed extensions: `.csv,.tsv,.txt,.dat,.inp,.out`)
+- Real-time parsing progress with data preview (time points, units, period)
+- Sample data loader integrated via `SampleDataAnalysis`
+
+### QAQCTab
+- Data quality checks for imported time series
+- Missing value detection, outlier identification, sensor error flagging
+
+### DWFGWITab
+- Dry Weather Flow and Groundwater Infiltration separation
+- Pattern recognition to isolate baseline flows
+
+### RDIISeriesTab
+- Generates observed RDII by subtracting DWF/GWI from total flow
+
+### EventsTab
+- Storm event detection and classification
+- Event selection for calibration (supports `selectedEventId` prop)
+
+### CalibrateTab
+- RTK parameter calibration using NSGA-II
+- Calls `optimize-rtk` edge function
+- Uses `CalibrationWizard` with steps: EventDetection → RTKOptimization → SWMM5Export
+- Features: `AutoConstraintDetector`, `MLParameterSuggestion`, `ParameterCorrelationMatrix`
+
+### CompareTab
+- Side-by-side comparison of multiple calibration scenarios
+
+### TimeSeriesTab
+- Time series decomposition and analysis
+
+### ExportTab
+- Export calibrated RTK parameters to InfoWorks ICM format
+- Supports proportional/equal distribution to target nodes
+
+### DocsTab
+- Technical documentation with Mermaid diagrams
+- Python module reference
+- Workflow process flow visualization
+- Interactive tutorial launcher
+
+---
+
+## 11. Core Components
+
+### TimeSeriesOverview
+- Dual-panel Recharts visualization (flow + rainfall)
+- `Brush` component for zoom/pan on x-axis
+- Responsive container with gradient-filled area charts
+- Shows on the Data Import tab above the import controls
+
+### InteractiveTutorial
+- First-visit guided tour (stored in `localStorage: hasSeenTutorial`)
+- 8-step overlay explaining the RTK calibration workflow
+- Can navigate to specific tabs via `onTabChange` callback
+- Props: `isOpen: boolean`, `onClose: () => void`, `onTabChange: (tab: string) => void`
+
+**Tutorial Steps (in order):**
+
+| # | Title | Target Tab | Key Instructions |
+|---|-------|-----------|------------------|
+| 1 | Import Your Data | `data` | Upload CSV flow & rainfall files, review stats, align timestamps |
+| 2 | Quality Assurance | `qaqc` | Check completeness, identify outliers, validate timestamp continuity |
+| 3 | Separate DWF & GWI | `dwf` | Define base flow patterns, calculate DWF baseline, subtract DWF+GWI |
+| 4 | Calculate RDII Series | `rdii` | RDII = Flow − DWF − GWI, set threshold, visualize with rainfall |
+| 5 | Identify Storm Events | `events` | Set rainfall depth threshold, define inter-event dry period, review events |
+| 6 | Calibrate RTK Parameters | `calibrate` | Select events, configure NSGA-II, run optimization, review Pareto front |
+| 7 | Validate & Compare | `compare` | Apply to validation events, compare observed vs simulated, check overfitting |
+| 8 | Export Results | `export` | Generate PDF/Word report, export RTK for SWMM/ICM, save to database |
+
+### CalibrationProjectManager
+- Full CRUD for `calibration_history` table
+- Save dialog with basin details (name, type, area, imperviousness, notes)
+- Table view with performance badges (color-coded by RMSE/NSE)
+- Detail view for individual records
+- Delete with confirmation
+
+### ParetoSurface3D
+- React Three Fiber 3D visualization of Pareto front
+- Interactive rotation/zoom of multi-objective solution space
+
+### ReportGenerator
+- Generates PDF (jspdf) and DOCX (docx) reports
+- Includes calibration parameters, metrics, and charts (via html2canvas)
+
+### HydrographVisualization
+- Overlay of observed vs. simulated hydrographs
+- Component breakdown (fast/medium/slow response)
+
+### ModelValidationDashboard
+- Goodness-of-fit metrics: NSE, PBIAS, R²
+- Residual analysis and autocorrelation
+
+---
+
+## 12. File Format Parsers
+
+**Location:** `src/lib/fileFormatParsers.ts`
+
+### Supported Formats
+
+| Format | Detection Method | Parser Function |
+|--------|-----------------|----------------|
+| **SWMM5** | `[TIMESERIES]` section, EPA header | `parseSWMM5TimeSeriesFile()` |
+| **ICM SWMM** | Innovyze/Autodesk + ICM SWMM headers | `parseICMSWMMExport()` |
+| **InfoWorks ICM** | InfoWorks ICM/CS headers, `.prn` extension | `parseInfoWorksExport()` |
+| **CSV** | `.csv`/`.tsv` extension fallback | `parseCSVGeneric()` |
+
+### Main Entry Point
+```typescript
+parseFile(file: File): Promise<{ format: FileFormat; data: ParsedTimeSeriesData[] }>
+```
+- Detects format via `detectFileFormat()`
+- Routes to appropriate parser
+- Returns array of `ParsedTimeSeriesData` (one per series in file)
+
+### CSV Parser Requirements
+- Must have a column with "date", "time", or "timestamp" in the header (case-insensitive)
+- All other numeric columns are parsed as separate series
+- Timestamps parsed via `new Date()`
+
+---
+
+## 13. Sample Data
+
+### Flow Data (`public/sample-data/flow-data.csv`)
+- **Period:** 2024-01-01 to 2024-01-03 (72 hourly records)
+- **Unit:** MGD (Million Gallons per Day)
+- **Pattern:** Typical diurnal flow pattern (low ~2.1 MGD at 4 AM, peak ~4.2 MGD at 6 PM)
+- **Storm event on Day 3:** Flow spikes to 8.45 MGD at 10:00 due to RDII
+
+### Rainfall Data (`public/sample-data/rainfall-data.csv`)
+- **Period:** Same 72 hours
+- **Unit:** Inches per hour
+- **Pattern:** Dry on days 1–2; storm on day 3 starting 02:00, peaking 0.85 in/hr at 08:00, ending by 16:00
+- **Total storm depth:** ~4.77 inches
+
+---
+
+## 14. Database Schema
+
+### Table: `calibration_history`
+
+| Column | Type | Nullable | Default | Description |
+|--------|------|:--------:|---------|-------------|
+| `id` | UUID | ❌ | `gen_random_uuid()` | Primary key |
+| `user_id` | UUID | ✅ | — | Auth user reference |
+| `basin_name` | TEXT | ❌ | — | Name of drainage basin |
+| `basin_type` | TEXT | ✅ | — | e.g., "residential", "commercial" |
+| `drainage_area` | NUMERIC | ✅ | — | Acres |
+| `imperviousness` | NUMERIC | ✅ | — | Percent (0–100) |
+| `r1`, `r2`, `r3` | NUMERIC | ❌ | — | Response ratios |
+| `t1`, `t2`, `t3` | NUMERIC | ❌ | — | Time to peak (hours) |
+| `k1`, `k2`, `k3` | NUMERIC | ❌ | — | Recession constants |
+| `rmse` | NUMERIC | ❌ | — | Root mean square error |
+| `volume_error` | NUMERIC | ❌ | — | Volume error % |
+| `peak_error` | NUMERIC | ❌ | — | Peak flow error % |
+| `nse` | NUMERIC | ✅ | — | Nash-Sutcliffe efficiency |
+| `r2_score` | NUMERIC | ✅ | — | R² coefficient |
+| `num_storms` | INTEGER | ✅ | — | Number of storms used |
+| `calibration_notes` | TEXT | ✅ | — | User notes |
+| `created_at` | TIMESTAMPTZ | ❌ | `now()` | Creation timestamp |
+| `updated_at` | TIMESTAMPTZ | ❌ | `now()` | Last update |
+
+### Database Functions
+- `update_updated_at_column()` — Trigger function to auto-update `updated_at`
+
+### RLS Policies
+
+RLS is enabled on `calibration_history`. All four policies use `RESTRICTIVE` mode (Permissive: No):
+
+| Policy | Command | Using | With Check |
+|--------|---------|-------|------------|
+| Users can read their own calibration history | `SELECT` | `auth.uid() = user_id` | — |
+| Users can insert their own calibration history | `INSERT` | — | `auth.uid() = user_id` |
+| Users can update their own calibration history | `UPDATE` | `auth.uid() = user_id` | `auth.uid() = user_id` |
+| Users can delete their own calibration history | `DELETE` | `auth.uid() = user_id` | — |
+
+> **Note:** Because these are RESTRICTIVE (not permissive), authenticated users can ONLY access rows where `user_id` matches their `auth.uid()`. There are no public/anonymous access policies.
+
+### Migration SQL (to recreate)
+
+```sql
+-- Create the calibration_history table
+CREATE TABLE public.calibration_history (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID,
+  basin_name TEXT NOT NULL,
+  basin_type TEXT,
+  drainage_area DOUBLE PRECISION,
+  imperviousness DOUBLE PRECISION,
+  r1 DOUBLE PRECISION NOT NULL,
+  t1 DOUBLE PRECISION NOT NULL,
+  k1 DOUBLE PRECISION NOT NULL,
+  r2 DOUBLE PRECISION NOT NULL,
+  t2 DOUBLE PRECISION NOT NULL,
+  k2 DOUBLE PRECISION NOT NULL,
+  r3 DOUBLE PRECISION NOT NULL,
+  t3 DOUBLE PRECISION NOT NULL,
+  k3 DOUBLE PRECISION NOT NULL,
+  rmse DOUBLE PRECISION NOT NULL,
+  volume_error DOUBLE PRECISION NOT NULL,
+  peak_error DOUBLE PRECISION NOT NULL,
+  nse DOUBLE PRECISION,
+  r2_score DOUBLE PRECISION,
+  num_storms INTEGER,
+  calibration_notes TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- Auto-update trigger
+CREATE OR REPLACE FUNCTION public.update_updated_at_column()
+RETURNS trigger
+LANGUAGE plpgsql
+SET search_path TO 'public'
+AS $$
+BEGIN
+  NEW.updated_at = now();
+  RETURN NEW;
+END;
+$$;
+
+CREATE TRIGGER update_calibration_history_updated_at
+  BEFORE UPDATE ON public.calibration_history
+  FOR EACH ROW
+  EXECUTE FUNCTION public.update_updated_at_column();
+
+-- Enable RLS
+ALTER TABLE public.calibration_history ENABLE ROW LEVEL SECURITY;
+
+-- RLS Policies (RESTRICTIVE)
+CREATE POLICY "Users can read their own calibration history"
+  ON public.calibration_history FOR SELECT
+  USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can insert their own calibration history"
+  ON public.calibration_history FOR INSERT
+  WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "Users can update their own calibration history"
+  ON public.calibration_history FOR UPDATE
+  USING (auth.uid() = user_id)
+  WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "Users can delete their own calibration history"
+  ON public.calibration_history FOR DELETE
+  USING (auth.uid() = user_id);
+```
+
+### Database Triggers
+
+- `update_calibration_history_updated_at` — Fires `BEFORE UPDATE` on `calibration_history`, calls `update_updated_at_column()` to set `updated_at = now()`.
+
+---
+
+## 15. Edge Functions (Serverless Backend)
+
+### `optimize-rtk`
+- **Path:** `supabase/functions/optimize-rtk/index.ts`
+- **Auth:** JWT verification disabled (`verify_jwt = false`)
+- **Purpose:** Runs NSGA-II-style RTK calibration via Lovable AI
+- **Input:** `{ rainfallData, flowData, events, bounds, algorithmParams }`
+- **AI Model:** `google/gemini-2.5-flash` via `https://ai.gateway.lovable.dev/v1/chat/completions`
+- **Output:** `{ solutions: [{ parameters, rmse, volumeError, peakError, nse }] }`
+- **Error handling:** 429 (rate limit), 402 (payment required), 500 (general)
+
+### `suggest-parameters`
+- **Path:** `supabase/functions/suggest-parameters/index.ts`
+- **Auth:** JWT verification disabled
+- **Purpose:** AI-powered parameter suggestions based on historical calibrations
+- **Input:** `{ basinType, drainageArea?, imperviousness? }` (Zod validated)
+- **Process:**
+  1. Queries `calibration_history` for similar basins (top 50 by RMSE)
+  2. Sends historical data + basin characteristics to AI
+  3. Returns suggested RTK parameters with confidence level
+- **Output:** `{ suggestion: string, historicalDataCount: number }`
+
+### Shared Configuration
+Both functions use:
+- `LOVABLE_API_KEY` secret for AI gateway auth
+- CORS headers allowing all origins
+- `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` for DB access (suggest-parameters only)
+
+### Frontend Invocation Examples
+
+**Calling `optimize-rtk`** (from `RTKOptimizationStep.tsx`):
+```typescript
+import { supabase } from "@/integrations/supabase/client";
+
+const { data, error } = await supabase.functions.invoke('optimize-rtk', {
+  body: {
+    rainfallData: rainfallData.values,       // number[]
+    flowData: flowData.values,               // number[]
+    events: detectedEvents.filter(e => e.selected),
+    bounds,                                  // { R1: [min, max], ... }
+    algorithmParams: {
+      populationSize: 100,
+      generations: 50
+    }
+  }
+});
+// data.solutions: OptimizationResult[]
+```
+
+**Calling `suggest-parameters`** (from `MLParameterSuggestion.tsx`):
+```typescript
+const { data, error } = await supabase.functions.invoke("suggest-parameters", {
+  body: {
+    basinType: "residential",
+    drainageArea: 150.0,        // nullable
+    imperviousness: 35.0,       // nullable
+  },
+  headers: {
+    Authorization: `Bearer ${session?.access_token}`,
+  },
+});
+// data.suggestion: string (AI-generated text)
+// data.historicalDataCount: number
+```
+
+---
+
+## 16. Python Modules (Reference/Offline)
+
+These Python files in `/python/` are **NOT executed in the browser**. They serve as reference implementations and documentation for the algorithms used:
+
+| Module | Purpose | Key Functions |
+|--------|---------|--------------|
+| `rdii_mo_nsga2.py` | Core RDII modeling + NSGA-II optimization | `triangular_uh_kernel()`, `rdii_from_rain()`, `evaluate_objectives()`, `nsga2_optimize()` |
+| `bayes_uncertainty.py` | Bayesian uncertainty via MCMC | `mh_sample()`, `credible_bands()`, `param_summary()` |
+| `identifiability.py` | Parameter sensitivity analysis | `morris_identifiability()`, `jacobian_identifiability()` |
+| `storm_classes.py` | Storm event classification | `extract_events()`, `event_features()`, `cluster_storms()`, `train_banks_by_cluster()` |
+| `roi_dashboard.py` | ROI/cost-benefit analysis | (utility functions) |
+
+---
+
+## 17. Design System
+
+### Color Palette (HSL tokens in `src/index.css`)
+
+#### Light Mode
+| Token | HSL | Usage |
+|-------|-----|-------|
+| `--primary` | `211 85% 28%` | Deep blue — buttons, active states |
+| `--accent` | `187 85% 45%` | Cyan — secondary actions, gradients |
+| `--background` | `210 20% 98%` | Near-white page background |
+| `--foreground` | `215 25% 15%` | Dark text |
+| `--muted` | `210 15% 95%` | Subtle backgrounds |
+| `--destructive` | `0 72% 51%` | Red — errors, delete |
+| `--warning` | `38 92% 50%` | Orange — warnings |
+| `--success` | `142 71% 45%` | Green — success states |
+
+#### Dark Mode
+Primary and accent swap roles (accent becomes primary in dark mode).
+
+### Custom Tokens
+```css
+--gradient-primary: linear-gradient(135deg, hsl(primary), hsl(primary-lighter));
+--gradient-accent: linear-gradient(135deg, hsl(accent), hsl(accent-lighter));
+--shadow-soft / --shadow-medium / --shadow-strong
+--transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+```
+
+### Typography
+Uses system default fonts via Tailwind (no custom font imports).
+
+### Tailwind Config Extensions
+- Custom `warning` and `success` color scales
+- Sidebar color tokens
+- Accordion animations
+- Border radius from `--radius` CSS variable (0.5rem)
+
+---
+
+## 18. Dependencies
+
+### Core
+- `react` ^18.3.1, `react-dom` ^18.3.1
+- `react-router-dom` ^6.30.1
+- `typescript` (via Vite)
+- `vite`
+
+### UI
+- `@radix-ui/*` — Full suite of accessible primitives (40+ packages)
+- `tailwindcss` + `tailwindcss-animate`
+- `class-variance-authority` ^0.7.1
+- `clsx` ^2.1.1 + `tailwind-merge` ^2.6.0
+- `lucide-react` ^0.462.0 — Icon library
+- `cmdk` ^1.1.1 — Command palette
+- `vaul` ^0.9.9 — Drawer
+- `sonner` ^1.7.4 — Toast notifications
+- `next-themes` ^0.3.0 — Theme switching (dark/light)
+- `embla-carousel-react` ^8.6.0
+
+### Data & Visualization
+- `recharts` ^2.15.4 — Charts (area, line, bar, brush)
+- `three` ^0.160.1 — 3D rendering
+- `@react-three/fiber` ^8.18.0 — React Three.js renderer
+- `@react-three/drei` ^9.122.0 — Three.js helpers
+
+### Backend
+- `@supabase/supabase-js` ^2.81.1
+- `@tanstack/react-query` ^5.83.0
+
+### Documents
+- `docx` ^8.5.0 — Word document generation
+- `jspdf` ^2.5.2 — PDF generation
+- `html2canvas` ^1.4.1 — Screenshot to canvas
+
+### Forms
+- `react-hook-form` ^7.61.1
+- `@hookform/resolvers` ^3.10.0
+- `zod` ^3.25.76
+
+### Other
+- `date-fns` ^3.6.0
+- `input-otp` ^1.4.2
+- `react-day-picker` ^8.10.1
+- `react-resizable-panels` ^2.1.9
+
+---
+
+## 19. Environment Variables & Secrets
+
+### Frontend (`.env` — auto-managed, do NOT edit)
+```
+VITE_SUPABASE_URL=https://kgbcorszvakgdwzcupgs.supabase.co
+VITE_SUPABASE_PUBLISHABLE_KEY=eyJhbGci...
+VITE_SUPABASE_PROJECT_ID=kgbcorszvakgdwzcupgs
+```
+
+### Backend Secrets (available in edge functions)
+| Secret | Purpose |
+|--------|---------|
+| `SUPABASE_URL` | Database/API URL |
+| `SUPABASE_ANON_KEY` | Public anon key |
+| `SUPABASE_SERVICE_ROLE_KEY` | Admin DB access |
+| `SUPABASE_DB_URL` | Direct PostgreSQL connection |
+| `LOVABLE_API_KEY` | Lovable AI Gateway authentication |
+| `SUPABASE_PUBLISHABLE_KEY` | Public key (alias) |
+
+---
+
+## 20. Known Limitations & TODOs
+
+### Current Limitations
+1. **No real NSGA-II execution** — Optimization is approximated by AI (Gemini 2.5 Flash) rather than running actual NSGA-II algorithm in-browser
+2. **Python modules are reference only** — Not executed; would need a Python backend or WASM compilation
+3. **Sample data is limited** — Only 3 days of hourly data (72 points each)
+4. **DocsTab is 460 lines** — Should be refactored into smaller sub-components
+5. **`optimize-rtk` has no JWT verification** — Anyone can call it
+6. **Projects page doesn't require auth** — Unlike Index page
+7. **No dark mode toggle in UI** — Tokens exist but no toggle component
+
+### Potential Enhancements
+- Batch calibration export to Excel/CSV
+- Calibration template library
+- Parameter sensitivity tornado diagrams
+- Real NSGA-II via WebAssembly or Python backend
+- Comparison charts across saved calibrations
+- File upload to cloud storage (currently client-side only)
+- Realtime collaboration on calibration projects
+
+---
+
+## 21. Reproducing the Project
+
+### Prerequisites
+- Node.js 18+ or Bun
+- Lovable account (for cloud features) OR standalone Supabase project
+
+### Steps to Recreate
+
+1. **Clone/export the repository**
+
+2. **Install dependencies:**
+   ```bash
+   npm install
+   # or
+   bun install
+   ```
+
+3. **Set up Supabase:**
+   - Create a Supabase project
+   - Run the migration to create `calibration_history` table (see schema above)
+   - Create the `update_updated_at_column()` function
+   - Enable RLS and add appropriate policies
+   - Deploy edge functions (`optimize-rtk`, `suggest-parameters`)
+
+4. **Configure environment:**
+   ```env
+   VITE_SUPABASE_URL=your_supabase_url
+   VITE_SUPABASE_PUBLISHABLE_KEY=your_anon_key
+   ```
+
+5. **Set edge function secrets:**
+   ```bash
+   supabase secrets set LOVABLE_API_KEY=your_ai_key
+   ```
+
+6. **Run locally:**
+   ```bash
+   npm run dev
+   # or
+   bun dev
+   ```
+
+7. **Deploy:**
+   - Lovable: Click "Publish"
+   - Self-hosted: `npm run build` → deploy `dist/` to any static host
+   - Edge functions: `supabase functions deploy`
+
+---
+
+*End of handover document.*
