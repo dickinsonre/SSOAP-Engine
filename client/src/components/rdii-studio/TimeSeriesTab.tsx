@@ -13,6 +13,7 @@ import {
   Legend,
 } from "recharts";
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
+import { ConvolutionVisualizer } from "./ConvolutionVisualizer";
 
 interface TimeSeriesTabProps {
   onNext?: () => void;
@@ -123,6 +124,8 @@ export function TimeSeriesTab({ onNext }: TimeSeriesTabProps) {
           </ChartContainer>
         </CardContent>
       </Card>
+
+      <ConvolutionVisualizer />
 
       {onNext && (
         <div className="flex justify-end">

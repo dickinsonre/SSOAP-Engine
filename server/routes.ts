@@ -489,6 +489,50 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     }
   });
 
+  app.post("/api/calibration/run-direct", async (req, res) => {
+    try {
+      const { rainfall, observed, gaConfig } = req.body;
+
+      if (!rainfall || !observed || !Array.isArray(rainfall) || !Array.isArray(observed)) {
+        return res.status(400).json({ error: "rainfall and observed arrays required" });
+      }
+
+      const config: GAConfig = gaConfig || defaultGAConfig;
+
+      const observedData: ObservedData = {
+        timestamps: observed.map((_: unknown, i: number) => i),
+        flows: observed,
+        rainfall,
+      };
+
+      const startTime = Date.now();
+      const result = runGeneticAlgorithm(config, observedData, 1.0);
+      const elapsed = Date.now() - startTime;
+
+      res.json({
+        success: true,
+        parameters: {
+          R1: result.optimizedParameters.r1,
+          T1: result.optimizedParameters.t1,
+          K1: result.optimizedParameters.k1,
+          R2: result.optimizedParameters.r2,
+          T2: result.optimizedParameters.t2,
+          K2: result.optimizedParameters.k2,
+          R3: result.optimizedParameters.r3,
+          T3: result.optimizedParameters.t3,
+          K3: result.optimizedParameters.k3,
+        },
+        simulatedFlow: result.simulatedFlow,
+        statistics: result.statistics,
+        elapsed,
+        generationHistory: result.generationHistory,
+      });
+    } catch (error) {
+      console.error("Direct calibration error:", error);
+      res.status(500).json({ error: "Failed to run direct calibration" });
+    }
+  });
+
   app.post("/api/calibration/apply", async (req, res) => {
     try {
       const { rdiiParameterId, optimizedParameters } = req.body;

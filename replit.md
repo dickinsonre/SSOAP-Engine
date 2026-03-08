@@ -98,7 +98,14 @@ The application includes seeded demo data for immediate testing:
 - Sample data in `client/public/sample-data/` (3-day hourly flow + rainfall CSV, served by Vite from client root)
 - Tab components in `client/src/components/rdii-studio/`
 - Client-side NSGA-II multi-objective optimization for RTK parameter calibration
-- All processing is client-side (no server endpoints needed)
+- All processing is client-side (except Tournament GA which uses `/api/calibration/run-direct`)
+
+### RDII Studio Improvements (March 2026)
+- **Workflow Progress Tracker**: Visual progress bar + step indicators above tabs showing completion status (complete/pending/locked)
+- **Ecosystem Connections**: 4 external link buttons in Export tab (INP MAKER, Rain Canvas, SWMM5 Engine, BatchSWMM)
+- **Calibration Tournament**: Side-by-side GA vs NSGA-II comparison with metrics table, hydrograph overlay, and auto-verdict
+- **Convolution Visualizer**: Animated RTK convolution in Time Series tab with play/pause/speed controls, showing fast/medium/slow RDII building up
+- New server endpoint: `POST /api/calibration/run-direct` accepts raw rainfall/observed arrays for tournament GA
 
 ## Development Notes
 

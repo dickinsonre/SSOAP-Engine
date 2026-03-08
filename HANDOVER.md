@@ -29,7 +29,8 @@
 18. [Known Issues & Bug Fixes Applied](#18-known-issues--bug-fixes-applied)
 19. [Testing & Validation](#19-testing--validation)
 20. [Deployment](#20-deployment)
-21. [Future Enhancement Opportunities](#21-future-enhancement-opportunities)
+21. [Implemented Improvements (from A+ Roadmap)](#21-implemented-improvements-from-a-roadmap)
+22. [Future Enhancement Opportunities](#22-future-enhancement-opportunities)
 
 ---
 
@@ -144,11 +145,12 @@ ssoap-toolbox/
 │   │   │   │   ├── DWFGWITab.tsx        # Tab 3: DWF separation (217 lines)
 │   │   │   │   ├── RDIISeriesTab.tsx    # Tab 4: RDII computation (198 lines)
 │   │   │   │   ├── EventsTab.tsx        # Tab 5: Storm event detection (257 lines)
-│   │   │   │   ├── CalibrateTab.tsx     # Tab 6: NSGA-II optimization (485 lines)
+│   │   │   │   ├── CalibrateTab.tsx     # Tab 6: NSGA-II + Tournament (822 lines)
 │   │   │   │   ├── CompareTab.tsx       # Tab 7: Solution comparison (183 lines)
 │   │   │   │   ├── TimeSeriesTab.tsx    # Tab 8: Flow decomposition (156 lines)
-│   │   │   │   ├── ExportTab.tsx        # Tab 9: SWMM5/CSV export (172 lines)
-│   │   │   │   └── DocsTab.tsx          # Tab 10: Documentation (213 lines)
+│   │   │   │   ├── ExportTab.tsx        # Tab 9: SWMM5/CSV export + ecosystem links (201 lines)
+│   │   │   │   ├── DocsTab.tsx          # Tab 10: Documentation (213 lines)
+│   │   │   │   └── ConvolutionVisualizer.tsx  # Animated RTK convolution (409 lines)
 │   │   │   └── ui/                  # shadcn/ui components (40+ files)
 │   │   ├── contexts/
 │   │   │   └── CalibrationDataContext.tsx  # Cross-tab state management (181 lines)
@@ -168,7 +170,7 @@ ssoap-toolbox/
 │   │       ├── hydrograph.tsx       # Flow visualization (409 lines)
 │   │       ├── condition-assessment.tsx  # Pipe condition tracking (518 lines)
 │   │       ├── sso-events.tsx       # SSO event logging (566 lines)
-│   │       ├── rdii-studio.tsx      # RDII Studio 10-tab page (148 lines)
+│   │       ├── rdii-studio.tsx      # RDII Studio 10-tab page + progress tracker (212 lines)
 │   │       ├── documents.tsx        # Document management (373 lines)
 │   │       ├── settings.tsx         # Theme & system settings (315 lines)
 │   │       └── not-found.tsx        # 404 page
@@ -1589,7 +1591,44 @@ The Express server binds to `0.0.0.0:5000` (configurable via `PORT` env var).
 
 ---
 
-## 21. Future Enhancement Opportunities
+## 21. Implemented Improvements (from A+ Roadmap)
+
+### Ecosystem Connections (ExportTab)
+- 4 external link buttons in the Export tab connecting SSOAP to companion tools:
+  - **INP MAKER**: Opens with RTK parameters encoded in URL hash for seamless .inp file generation
+  - **Rain Canvas**: Links to rainfall data library and visualizer
+  - **SWMM5 Engine**: Links to online hydraulic simulation runner
+  - **BatchSWMM**: Links to batch SWMM scenario processor
+- File: `client/src/components/rdii-studio/ExportTab.tsx`
+
+### Workflow Progress Tracker (RDII Studio)
+- Visual progress bar and step indicators above the RDII Studio tab bar
+- Computes step completion from CalibrationDataContext state (data loaded, QA/QC run, DWF computed, etc.)
+- Shows percentage complete, step count, and "Next Action" hint with clickable navigation
+- Step states: complete (green check), pending (circle), locked (lock icon)
+- File: `client/src/pages/rdii-studio.tsx` (WorkflowProgressTracker component)
+
+### Calibration Tournament (CalibrateTab)
+- "Run Tournament" button runs both server-side GA and client-side NSGA-II on the same data simultaneously
+- Server GA uses new `POST /api/calibration/run-direct` endpoint accepting raw rainfall/observed arrays
+- Side-by-side metrics table: RMSE, NSE, Volume Error, Peak Error, Time Elapsed with winner badges
+- Hydrograph overlay: Observed + GA best + NSGA-II best as overlaid lines
+- Auto-generated verdict text based on which algorithm wins more metrics
+- Files: `client/src/components/rdii-studio/CalibrateTab.tsx`, `server/routes.ts`
+
+### Convolution Visualizer (TimeSeriesTab)
+- Animated RTK convolution visualization showing how each unit hydrograph builds the total RDII
+- Step-by-step convolution with fast/medium/slow RDII contributions stacked and accumulating
+- Play/Pause/Reset controls with speed selector (1x, 2x, 5x, 10x)
+- Step counter and scrubbing slider for manual navigation
+- Real-time NSE/RMSE metrics updating as convolution progresses
+- Uses selected calibration solution parameters (or default RTK params)
+- Unit hydrograph shape display showing triangular UH profiles
+- File: `client/src/components/rdii-studio/ConvolutionVisualizer.tsx`
+
+---
+
+## 22. Future Enhancement Opportunities
 
 ### High Priority
 

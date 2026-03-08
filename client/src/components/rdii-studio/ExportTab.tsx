@@ -1,5 +1,5 @@
 import { useState, useCallback } from "react";
-import { FileOutput, Copy, Download, Check } from "lucide-react";
+import { FileOutput, Copy, Download, Check, ExternalLink, FileText, CloudRain, Play, Layers } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -116,6 +116,82 @@ Peak Error,${selected.peakError.toFixed(2)}%`;
               <p className="text-lg font-bold font-mono" data-testid="text-export-peak">{selected.peakError.toFixed(1)}%</p>
               <p className="text-xs text-muted-foreground">Peak Error</p>
             </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-sm">Ecosystem Connections</CardTitle>
+          <CardDescription className="text-xs">Send your RTK parameters to companion tools</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <Button
+              variant="outline"
+              className="justify-start gap-3"
+              data-testid="button-link-inp-maker"
+              onClick={() => {
+                const p = selected.parameters;
+                const hash = `R1=${p.R1}&T1=${p.T1}&K1=${p.K1}&R2=${p.R2}&T2=${p.T2}&K2=${p.K2}&R3=${p.R3}&T3=${p.T3}&K3=${p.K3}`;
+                window.open(`https://inp-maker.app/#${hash}`, "_blank", "noopener,noreferrer");
+              }}
+            >
+              <FileText className="h-4 w-4 shrink-0" />
+              <div className="flex flex-col items-start text-left">
+                <span className="text-sm">INP MAKER</span>
+                <span className="text-xs text-muted-foreground">Build SWMM .inp files with RTK params</span>
+              </div>
+              <ExternalLink className="ml-auto h-3 w-3 shrink-0 text-muted-foreground" />
+            </Button>
+
+            <Button
+              variant="outline"
+              className="justify-start gap-3"
+              data-testid="button-link-rain-canvas"
+              onClick={() => {
+                window.open("https://rain-canvas.app/", "_blank", "noopener,noreferrer");
+              }}
+            >
+              <CloudRain className="h-4 w-4 shrink-0" />
+              <div className="flex flex-col items-start text-left">
+                <span className="text-sm">Rain Canvas</span>
+                <span className="text-xs text-muted-foreground">Rainfall data library and visualizer</span>
+              </div>
+              <ExternalLink className="ml-auto h-3 w-3 shrink-0 text-muted-foreground" />
+            </Button>
+
+            <Button
+              variant="outline"
+              className="justify-start gap-3"
+              data-testid="button-link-swmm5-engine"
+              onClick={() => {
+                window.open("https://swmm5-engine.app/", "_blank", "noopener,noreferrer");
+              }}
+            >
+              <Play className="h-4 w-4 shrink-0" />
+              <div className="flex flex-col items-start text-left">
+                <span className="text-sm">SWMM5 Engine</span>
+                <span className="text-xs text-muted-foreground">Run hydraulic simulations online</span>
+              </div>
+              <ExternalLink className="ml-auto h-3 w-3 shrink-0 text-muted-foreground" />
+            </Button>
+
+            <Button
+              variant="outline"
+              className="justify-start gap-3"
+              data-testid="button-link-batch-swmm"
+              onClick={() => {
+                window.open("https://batch-swmm.app/", "_blank", "noopener,noreferrer");
+              }}
+            >
+              <Layers className="h-4 w-4 shrink-0" />
+              <div className="flex flex-col items-start text-left">
+                <span className="text-sm">BatchSWMM</span>
+                <span className="text-xs text-muted-foreground">Batch process multiple SWMM scenarios</span>
+              </div>
+              <ExternalLink className="ml-auto h-3 w-3 shrink-0 text-muted-foreground" />
+            </Button>
           </div>
         </CardContent>
       </Card>
