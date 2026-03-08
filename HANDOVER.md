@@ -1626,6 +1626,85 @@ The Express server binds to `0.0.0.0:5000` (configurable via `PORT` env var).
 - Unit hydrograph shape display showing triangular UH profiles
 - File: `client/src/components/rdii-studio/ConvolutionVisualizer.tsx`
 
+### Interactive Tutorial (RDII Studio)
+- First-visit guided tour with 6 steps covering the RDII workflow
+- Tutorial state stored in localStorage (`rdii-studio-tutorial-seen`)
+- Replay via "Show Tutorial" button in the RDII Studio header
+- File: `client/src/components/rdii-studio/InteractiveTutorial.tsx`
+
+### Report Generator (ExportTab)
+- HTML calibration report download with RTK parameters, metrics, performance ratings, and SWMM5 input format
+- Blob-based HTML generation (no heavy PDF dependencies)
+- Includes Moriasi 2007 performance ratings and formatted parameter tables
+- File: `client/src/components/rdii-studio/ExportTab.tsx`
+
+### Model Validation Dashboard (CompareTab)
+- Goodness-of-fit metrics: NSE, PBIAS, R², RMSE, MAE
+- Moriasi 2007 color-coded performance badges (Very Good/Good/Satisfactory/Unsatisfactory)
+- Residual histogram showing error distribution
+- Residuals-vs-time scatter chart for temporal bias detection
+- File: `client/src/components/rdii-studio/ModelValidationDashboard.tsx`
+
+### Parameter Correlation Matrix (CompareTab)
+- Heatmap of pairwise Pearson correlations between R1-K3 across all Pareto solutions
+- Red/blue color coding for positive/negative correlations
+- Helps identify parameter interdependencies and trade-offs
+- File: `client/src/components/rdii-studio/ParameterCorrelationMatrix.tsx`
+
+### Brush Zoom/Pan (Multiple Tabs)
+- Recharts Brush component on all major hydrograph charts
+- Available in: DataImport, Calibrate, Compare, TimeSeries tabs
+- Interactive range selection for zooming into specific time periods
+
+### Enhanced Drag-and-Drop (DataImportTab)
+- File type validation against allowed extensions (`.csv`, `.dat`, `.inp`, `.tsv`, `.txt`, `.prn`)
+- 50MB file size limit with user-friendly error messages
+- Visual feedback: scale transform and shadow on drag-over
+- Success/error toast messages after import
+
+### AutoConstraintDetector (CalibrateTab)
+- Real-time RTK constraint validation as parameter sliders change
+- Checks: R1+R2+R3 ≤ 1.0, T1 < T2 < T3, K1 < K2 < K3
+- Green checkmark / red X icons with pass/fail badges for each constraint
+- Overall status badge: "All Passed" or "Violations Detected"
+- File: `client/src/components/rdii-studio/AutoConstraintDetector.tsx`
+
+### CalibrationWizard (CalibrateTab)
+- 3-step guided wizard: Event Selection → RTK Optimization → SWMM5 Export
+- Step 1: Checkboxes to select which storm events to calibrate against, showing rain depth and duration
+- Step 2: Run calibration button with progress indicator, displays RMSE/NSE/Vol/Peak metrics on completion
+- Step 3: SWMM5 [RDII] section formatted output with copy-to-clipboard
+- Step indicators with next/back navigation and completion tracking
+- File: `client/src/components/rdii-studio/CalibrationWizard.tsx`
+
+### CalibrationProjectManager (CompareTab)
+- Save/load calibration sessions to localStorage with basin metadata
+- Save dialog: basin name, type (residential/commercial/industrial/mixed), area (acres), imperviousness (%), notes
+- Table view of saved records with NSE-based performance badges (green ≥0.75, yellow ≥0.5, red <0.5)
+- Load button restores RTK parameters into CalibrationDataContext
+- Delete with AlertDialog confirmation
+- File: `client/src/components/rdii-studio/CalibrationProjectManager.tsx`
+
+### HydrographVisualization (CompareTab)
+- Fast/medium/slow RDII response curve breakdown using triangular unit hydrograph convolution
+- Stacked filled areas: fast (red), medium (orange), slow (blue) with observed flow overlay
+- Stats cards for each component: peak flow, time to peak, volume, and RTK parameter values
+- Uses selected calibration solution parameters and rainfall data from context
+- File: `client/src/components/rdii-studio/HydrographVisualization.tsx`
+
+### ICM Format Parsers (fileFormatParsers.ts)
+- ICM SWMM parser: Detects by "Innovyze"/"Autodesk" + "ICM"/"SWMM" headers; parses timestamped rows with tab/comma/semicolon delimiters
+- InfoWorks ICM parser: Detects by "InfoWorks" header or `.prn` extension; parses space/tab-delimited rows with auto-detection of data start
+- Updated `detectFileFormat()` to route to new parsers
+- DataImportTab updated to accept `.prn` extension and mention all supported formats
+- File: `client/src/lib/fileFormatParsers.ts`
+
+### HelpTooltip (Multiple Tabs)
+- Reusable "?" icon component using Radix UI Tooltip primitives
+- Configurable `text`, `side`, and `className` props
+- Applied to: CalibrateTab (R/T/K parameter explanation, RMSE, NSE, Volume Error, Peak Error), QAQCTab (QA/QC check explanation), DWFGWITab (DWF/GWI separation concepts, metric definitions)
+- File: `client/src/components/rdii-studio/HelpTooltip.tsx`
+
 ---
 
 ## 22. Future Enhancement Opportunities
