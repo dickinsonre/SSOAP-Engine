@@ -119,6 +119,25 @@ The application includes seeded demo data for immediate testing:
 - **ICM Format Parsers**: ICM SWMM and InfoWorks ICM file format parsers with auto-detection in fileFormatParsers.ts
 - **HelpTooltip**: Reusable contextual "?" help tooltips throughout RDII Studio (Calibrate metrics, QA/QC, DWF/GWI)
 
+### v2.0 Assessment Roadmap Features (March 2026)
+- **Simulation Results Panel**: Enhanced results with Run Summary (continuity error, nodes/links), Flooding Summary (flooded nodes bar chart), Capacity Analysis (critical/warning/ok breakdown), and Export (CSV/JSON)
+- **SSO Events Analytics Dashboard**: Collapsible analytics section with frequency by location bar chart, volume vs duration scatter, severity breakdown stat cards
+- **Condition Assessment Enhancement**: PACP-style scoring (1-5 structural/O&M), rehabilitation priority index (weighted condition+hydraulic+SSO risk), cost estimation (CIPP/pipe bursting/open cut), summary analytics cards
+- **DWF Analysis Enhancements**: Diurnal pattern editor (24-hour interactive bar/slider), preset patterns (residential/commercial/industrial), per-capita flow calculator, minimum night flow detection for GWI estimation
+- **Project Wizard**: Multi-step new project creation (Project Info → Import Model → Monitoring Data → Review & Create) with step indicators
+- **Report Generator**: HTML SSOAP summary report with selectable sections (project summary, DWF results, RDII quantification, capacity analysis, SSO risk ranking, rehab priorities), downloadable from Projects page
+- **Data Import Column Mapping**: Column mapping dialog in RDII Studio Data Import tab for CSV files with auto-detect, preview rows, flow/depth unit selection
+- **Network Map Visualization**: New `/network-map` page parsing SWMM INP [COORDINATES]/[VERTICES] sections, SVG rendering with zoom/pan, click-to-inspect, color-coded nodes/links, network statistics
+- **RDII Studio Sidebar Description**: Tooltip shows "Interactive RTK calibration with visual hydrograph fitting"
+- **Dashboard Title**: Changed to "Welcome to RDII Toolbox for SWMM5 and ICM InfoWorks"
+
+### Application Pages
+- Network Map: Interactive SWMM network visualization from INP files (`client/src/pages/network-map.tsx`)
+
+### New Components
+- `client/src/components/report-generator.tsx` - SSOAP summary report dialog with section selection
+- `client/src/components/column-mapping-dialog.tsx` - CSV column mapping with auto-detect and preview
+
 ## Development Notes
 
 ### Query Client Configuration

@@ -22,6 +22,7 @@ import SSOEventsPage from "@/pages/sso-events";
 import DocumentsPage from "@/pages/documents";
 import SettingsPage from "@/pages/settings";
 import RDIIStudioPage from "@/pages/rdii-studio";
+import NetworkMapPage from "@/pages/network-map";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -37,6 +38,7 @@ function Router() {
       <Route path="/sso-events" component={SSOEventsPage} />
       <Route path="/documents" component={DocumentsPage} />
       <Route path="/rdii-studio" component={RDIIStudioPage} />
+      <Route path="/network-map" component={NetworkMapPage} />
       <Route path="/settings" component={SettingsPage} />
       <Route component={NotFound} />
     </Switch>

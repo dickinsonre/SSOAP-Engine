@@ -14,6 +14,10 @@ import {
   RefreshCw,
   FileSpreadsheet,
   Database,
+  AlertTriangle,
+  BarChart3,
+  Gauge,
+  FileDown,
 } from "lucide-react";
 import { ICMImportDialog } from "@/components/icm-import-dialog";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -38,6 +42,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  ResponsiveContainer,
+} from "recharts";
+import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import type { Simulation, Project, NodeResult, LinkResult } from "@shared/schema";
@@ -357,6 +370,234 @@ function LinkResultsTable({ results }: { results: LinkResult[] }) {
   );
 }
 
+function RunSummaryPanel({ simulation, outputData }: { simulation: Simulation; outputData: Simulation["outputData"] & {} }) {
+  const continuityError = outputData.totalInflow > 0
+    ? Math.abs((outputData.totalInflow - outputData.totalOutflow) / outputData.totalInflow * 100)
+    : 0;
+  const continuityStatus = continuityError < 0.5 ? "good" : continuityError < 1.0 ? "warning" : "critical";
+
+  return (
+    <Card data-testid="card-run-summary">
+      <CardHeader className="pb-3">
+        <div className="flex items-center gap-2">
+          <BarChart3 className="h-5 w-5 text-primary" />
+          <CardTitle className="text-base">Run Summary</CardTitle>
+        </div>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <p className="text-xs text-muted-foreground">Continuity Error</p>
+            <div className="flex items-center gap-2">
+              <span className="text-lg font-mono font-semibold">{continuityError.toFixed(2)}%</span>
+              <Badge variant={continuityStatus === "good" ? "default" : continuityStatus === "warning" ? "secondary" : "destructive"} className="text-xs">
+                {continuityStatus === "good" ? "OK" : continuityStatus === "warning" ? "Warning" : "High"}
+              </Badge>
+            </div>
+          </div>
+          <div>
+            <p className="text-xs text-muted-foreground">Duration</p>
+            <span className="text-lg font-mono font-semibold">{simulation.duration}s</span>
+          </div>
+          <div>
+            <p className="text-xs text-muted-foreground">Total Inflow</p>
+            <span className="text-lg font-mono font-semibold">{outputData.totalInflow.toLocaleString()}</span>
+            <p className="text-xs text-muted-foreground">MG</p>
+          </div>
+          <div>
+            <p className="text-xs text-muted-foreground">Total Outflow</p>
+            <span className="text-lg font-mono font-semibold">{outputData.totalOutflow.toLocaleString()}</span>
+            <p className="text-xs text-muted-foreground">MG</p>
+          </div>
+          <div>
+            <p className="text-xs text-muted-foreground">Peak Flow</p>
+            <span className="text-lg font-mono font-semibold">{outputData.peakFlow.toFixed(1)} CFS</span>
+            <p className="text-xs text-muted-foreground">at {outputData.peakTime}</p>
+          </div>
+          <div>
+            <p className="text-xs text-muted-foreground">Nodes / Links</p>
+            <span className="text-lg font-mono font-semibold">{outputData.nodeResults.length} / {outputData.linkResults.length}</span>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+function FloodingSummaryPanel({ nodeResults }: { nodeResults: NodeResult[] }) {
+  const floodedNodes = nodeResults.filter(n => n.floodVolume > 0).sort((a, b) => b.floodVolume - a.floodVolume);
+  const totalFloodVolume = floodedNodes.reduce((s, n) => s + n.floodVolume, 0);
+  const totalFloodHours = floodedNodes.reduce((s, n) => s + n.timeFlooded, 0);
+
+  const chartData = floodedNodes.slice(0, 10).map(n => ({
+    name: n.name,
+    volume: Number(n.floodVolume.toFixed(4)),
+    hours: Number(n.timeFlooded.toFixed(2)),
+  }));
+
+  const floodChartConfig = {
+    volume: { label: "Flood Volume (MG)", color: "hsl(var(--destructive))" },
+  };
+
+  return (
+    <Card data-testid="card-flooding-summary">
+      <CardHeader className="pb-3">
+        <div className="flex items-center gap-2">
+          <AlertTriangle className="h-5 w-5 text-destructive" />
+          <CardTitle className="text-base">Flooding Summary</CardTitle>
+          {floodedNodes.length > 0 && (
+            <Badge variant="destructive" className="ml-auto">{floodedNodes.length} flooded</Badge>
+          )}
+        </div>
+      </CardHeader>
+      <CardContent>
+        {floodedNodes.length === 0 ? (
+          <div className="flex items-center gap-2 p-4 bg-green-500/10 rounded-lg">
+            <CheckCircle className="h-5 w-5 text-green-600" />
+            <span className="text-sm font-medium text-green-700 dark:text-green-400">No flooding detected</span>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            <div className="grid grid-cols-3 gap-3">
+              <div className="p-3 bg-destructive/10 rounded-lg text-center">
+                <p className="text-xl font-mono font-semibold text-destructive">{floodedNodes.length}</p>
+                <p className="text-xs text-muted-foreground">Flooded Nodes</p>
+              </div>
+              <div className="p-3 bg-destructive/10 rounded-lg text-center">
+                <p className="text-xl font-mono font-semibold text-destructive">{totalFloodVolume.toFixed(3)}</p>
+                <p className="text-xs text-muted-foreground">Total Vol (MG)</p>
+              </div>
+              <div className="p-3 bg-destructive/10 rounded-lg text-center">
+                <p className="text-xl font-mono font-semibold text-destructive">{totalFloodHours.toFixed(1)}</p>
+                <p className="text-xs text-muted-foreground">Total Flood Hrs</p>
+              </div>
+            </div>
+            {chartData.length > 0 && (
+              <ChartContainer config={floodChartConfig} className="h-[180px] w-full">
+                <BarChart data={chartData} layout="vertical" margin={{ left: 60 }}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis type="number" tick={{ fontSize: 11 }} />
+                  <YAxis type="category" dataKey="name" tick={{ fontSize: 11 }} width={55} />
+                  <ChartTooltip content={<ChartTooltipContent />} />
+                  <Bar dataKey="volume" fill="hsl(var(--destructive))" radius={[0, 4, 4, 0]} />
+                </BarChart>
+              </ChartContainer>
+            )}
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+function CapacityAnalysisPanel({ linkResults }: { linkResults: LinkResult[] }) {
+  const critical = linkResults.filter(l => l.capacityLimited > 0.5);
+  const warning = linkResults.filter(l => l.capacityLimited > 0 && l.capacityLimited <= 0.5);
+  const ok = linkResults.filter(l => l.capacityLimited === 0);
+
+  const topCapacity = [...linkResults]
+    .sort((a, b) => b.capacityLimited - a.capacityLimited)
+    .slice(0, 8)
+    .filter(l => l.capacityLimited > 0);
+
+  const capChartConfig = {
+    hours: { label: "Capacity Limited (hr)", color: "hsl(var(--chart-1))" },
+  };
+
+  return (
+    <Card data-testid="card-capacity-analysis">
+      <CardHeader className="pb-3">
+        <div className="flex items-center gap-2">
+          <Gauge className="h-5 w-5 text-primary" />
+          <CardTitle className="text-base">Capacity Analysis</CardTitle>
+        </div>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="grid grid-cols-3 gap-3">
+          <div className="p-3 bg-destructive/10 rounded-lg text-center">
+            <p className="text-xl font-mono font-semibold text-destructive">{critical.length}</p>
+            <p className="text-xs text-muted-foreground">Critical (&gt;0.5 hr)</p>
+          </div>
+          <div className="p-3 bg-yellow-500/10 rounded-lg text-center">
+            <p className="text-xl font-mono font-semibold text-yellow-600 dark:text-yellow-400">{warning.length}</p>
+            <p className="text-xs text-muted-foreground">Warning</p>
+          </div>
+          <div className="p-3 bg-green-500/10 rounded-lg text-center">
+            <p className="text-xl font-mono font-semibold text-green-600 dark:text-green-400">{ok.length}</p>
+            <p className="text-xs text-muted-foreground">OK</p>
+          </div>
+        </div>
+        {topCapacity.length > 0 && (
+          <ChartContainer config={capChartConfig} className="h-[180px] w-full">
+            <BarChart data={topCapacity.map(l => ({ name: l.name, hours: Number(l.capacityLimited.toFixed(2)) }))} layout="vertical" margin={{ left: 60 }}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis type="number" tick={{ fontSize: 11 }} />
+              <YAxis type="category" dataKey="name" tick={{ fontSize: 11 }} width={55} />
+              <ChartTooltip content={<ChartTooltipContent />} />
+              <Bar dataKey="hours" fill="hsl(var(--chart-1))" radius={[0, 4, 4, 0]} />
+            </BarChart>
+          </ChartContainer>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+function ExportPanel({ simulation }: { simulation: Simulation }) {
+  const handleExportCSV = useCallback(() => {
+    if (!simulation.outputData) return;
+    const { nodeResults, linkResults } = simulation.outputData;
+    let csv = "Type,ID,Name,MaxDepth,MaxHGL,TimeFlooded,FloodVolume,MaxFlow,MaxVelocity,CapacityLimited\n";
+    nodeResults.forEach(n => {
+      csv += `Node,${n.id},${n.name},${n.maxDepth},${n.maxHGL},${n.timeFlooded},${n.floodVolume},,, \n`;
+    });
+    linkResults.forEach(l => {
+      csv += `Link,${l.id},${l.name},${l.maxDepth},,,,${l.maxFlow},${l.maxVelocity},${l.capacityLimited}\n`;
+    });
+    const blob = new Blob([csv], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${simulation.name.replace(/\s+/g, "_")}_results.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }, [simulation]);
+
+  const handleExportJSON = useCallback(() => {
+    if (!simulation.outputData) return;
+    const blob = new Blob([JSON.stringify(simulation.outputData, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${simulation.name.replace(/\s+/g, "_")}_results.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }, [simulation]);
+
+  return (
+    <Card data-testid="card-export">
+      <CardHeader className="pb-3">
+        <div className="flex items-center gap-2">
+          <FileDown className="h-5 w-5 text-primary" />
+          <CardTitle className="text-base">Export Results</CardTitle>
+        </div>
+      </CardHeader>
+      <CardContent>
+        <div className="flex flex-wrap gap-3">
+          <Button variant="outline" size="sm" onClick={handleExportCSV} data-testid="button-export-csv">
+            <Download className="mr-2 h-4 w-4" />
+            Export CSV
+          </Button>
+          <Button variant="outline" size="sm" onClick={handleExportJSON} data-testid="button-export-json">
+            <Download className="mr-2 h-4 w-4" />
+            Export JSON
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
 function SimulationResults({ simulation }: { simulation: Simulation }) {
   if (!simulation.outputData) {
     return (
@@ -378,53 +619,14 @@ function SimulationResults({ simulation }: { simulation: Simulation }) {
 
   return (
     <div className="space-y-4">
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm text-muted-foreground">Total Inflow</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-semibold font-mono">
-              {outputData.totalInflow.toLocaleString()}
-            </div>
-            <p className="text-xs text-muted-foreground">Million Gallons</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm text-muted-foreground">Total Outflow</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-semibold font-mono">
-              {outputData.totalOutflow.toLocaleString()}
-            </div>
-            <p className="text-xs text-muted-foreground">Million Gallons</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm text-muted-foreground">Peak Flow</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-semibold font-mono">
-              {outputData.peakFlow.toFixed(1)}
-            </div>
-            <p className="text-xs text-muted-foreground">CFS at {outputData.peakTime}</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm text-muted-foreground">Overflow Volume</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-semibold font-mono text-destructive">
-              {outputData.overflowVolume.toLocaleString()}
-            </div>
-            <p className="text-xs text-muted-foreground">
-              {outputData.overflowCount} overflow events
-            </p>
-          </CardContent>
-        </Card>
+      <div className="grid gap-4 md:grid-cols-2">
+        <RunSummaryPanel simulation={simulation} outputData={outputData} />
+        <FloodingSummaryPanel nodeResults={outputData.nodeResults} />
+      </div>
+
+      <div className="grid gap-4 md:grid-cols-2">
+        <CapacityAnalysisPanel linkResults={outputData.linkResults} />
+        <ExportPanel simulation={simulation} />
       </div>
 
       <Card>

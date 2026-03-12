@@ -465,7 +465,7 @@ function WelcomeHero({ onImportClick, onICMImportClick }: { onImportClick: () =>
       <div className="relative">
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
           <div className="space-y-2">
-            <h2 className="text-2xl font-bold tracking-tight">Welcome to SSOAP Toolbox for SWMM5 and ICM InfoWorks</h2>
+            <h2 className="text-2xl font-bold tracking-tight">Welcome to RDII Toolbox for SWMM5 and ICM InfoWorks</h2>
             <p className="text-muted-foreground max-w-xl">
               Comprehensive sanitary sewer overflow analysis and planning tools powered by SWMM5 WebAssembly engine.
             </p>

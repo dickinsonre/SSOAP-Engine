@@ -11,6 +11,8 @@ import {
   Filter,
   Download,
   Calendar,
+  ChevronDown,
+  BarChart3,
 } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -18,6 +20,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import {
   Table,
   TableBody,
@@ -60,6 +63,10 @@ import {
   PieChart,
   Pie,
   Cell,
+  ScatterChart,
+  Scatter,
+  Tooltip,
+  ZAxis,
 } from "recharts";
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
 import { useToast } from "@/hooks/use-toast";
@@ -73,6 +80,12 @@ const chartConfig = {
   capacity: { label: "Capacity", color: "hsl(var(--chart-3))" },
   pump_failure: { label: "Pump Failure", color: "hsl(var(--chart-4))" },
   other: { label: "Other", color: "hsl(var(--chart-5))" },
+};
+
+const analyticsChartConfig = {
+  count: { label: "Events", color: "hsl(var(--chart-1))" },
+  volume: { label: "Volume (gal)", color: "hsl(var(--chart-2))" },
+  duration: { label: "Duration (min)", color: "hsl(var(--chart-3))" },
 };
 
 const severityColors = {
@@ -350,6 +363,138 @@ function CauseDistributionChart({ events }: { events: SSOEvent[] }) {
   );
 }
 
+function LocationFrequencyChart({ events }: { events: SSOEvent[] }) {
+  const locationData = events.reduce((acc, event) => {
+    acc[event.location] = (acc[event.location] || 0) + 1;
+    return acc;
+  }, {} as Record<string, number>);
+
+  const data = Object.entries(locationData)
+    .map(([location, count]) => ({ location, count }))
+    .sort((a, b) => b.count - a.count);
+
+  return (
+    <ChartContainer config={analyticsChartConfig} className="h-[250px] w-full">
+      <ResponsiveContainer>
+        <BarChart data={data} layout="vertical" margin={{ left: 20, right: 20, top: 5, bottom: 5 }}>
+          <CartesianGrid strokeDasharray="3 3" horizontal={false} />
+          <XAxis type="number" allowDecimals={false} />
+          <YAxis type="category" dataKey="location" width={100} tick={{ fontSize: 12 }} />
+          <ChartTooltip content={<ChartTooltipContent />} />
+          <Bar dataKey="count" fill="hsl(var(--chart-1))" radius={[0, 4, 4, 0]} />
+        </BarChart>
+      </ResponsiveContainer>
+    </ChartContainer>
+  );
+}
+
+function VolumeVsDurationScatter({ events }: { events: SSOEvent[] }) {
+  const data = events.map((e) => ({
+    volume: e.volume,
+    duration: e.duration,
+    location: e.location,
+  }));
+
+  return (
+    <ChartContainer config={analyticsChartConfig} className="h-[250px] w-full">
+      <ResponsiveContainer>
+        <ScatterChart margin={{ left: 10, right: 20, top: 10, bottom: 10 }}>
+          <CartesianGrid strokeDasharray="3 3" />
+          <XAxis type="number" dataKey="volume" name="Volume (gal)" tick={{ fontSize: 12 }} />
+          <YAxis type="number" dataKey="duration" name="Duration (min)" tick={{ fontSize: 12 }} />
+          <ZAxis range={[40, 400]} />
+          <ChartTooltip content={<ChartTooltipContent />} />
+          <Scatter data={data} fill="hsl(var(--chart-2))" />
+        </ScatterChart>
+      </ResponsiveContainer>
+    </ChartContainer>
+  );
+}
+
+function AnalyticsDashboard({ events }: { events: SSOEvent[] }) {
+  const [analyticsOpen, setAnalyticsOpen] = useState(true);
+
+  const minorCount = events.filter((e) => e.severity === "minor").length;
+  const moderateCount = events.filter((e) => e.severity === "moderate").length;
+  const majorCount = events.filter((e) => e.severity === "major").length;
+  const totalVolume = events.reduce((sum, e) => sum + e.volume, 0);
+  const avgDuration =
+    events.length > 0
+      ? events.reduce((sum, e) => sum + e.duration, 0) / events.length
+      : 0;
+
+  return (
+    <Collapsible open={analyticsOpen} onOpenChange={setAnalyticsOpen}>
+      <Card>
+        <CollapsibleTrigger asChild>
+          <CardHeader className="flex flex-row items-center justify-between gap-4 cursor-pointer" data-testid="button-toggle-analytics">
+            <div className="flex items-center gap-2">
+              <BarChart3 className="h-5 w-5 text-muted-foreground" />
+              <div>
+                <CardTitle className="text-lg">Analytics Dashboard</CardTitle>
+                <CardDescription>SSO event frequency, volume, and severity analysis</CardDescription>
+              </div>
+            </div>
+            <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform ${analyticsOpen ? "rotate-180" : ""}`} />
+          </CardHeader>
+        </CollapsibleTrigger>
+        <CollapsibleContent>
+          <CardContent className="space-y-6">
+            <div className="grid gap-4 grid-cols-2 sm:grid-cols-3 lg:grid-cols-5">
+              <Card data-testid="stat-total-volume">
+                <CardContent className="p-4">
+                  <p className="text-xs text-muted-foreground">Total Volume</p>
+                  <p className="text-xl font-semibold font-mono">{totalVolume.toLocaleString()}</p>
+                  <p className="text-xs text-muted-foreground">gallons</p>
+                </CardContent>
+              </Card>
+              <Card data-testid="stat-avg-duration">
+                <CardContent className="p-4">
+                  <p className="text-xs text-muted-foreground">Avg Duration</p>
+                  <p className="text-xl font-semibold font-mono">{avgDuration.toFixed(0)}</p>
+                  <p className="text-xs text-muted-foreground">minutes</p>
+                </CardContent>
+              </Card>
+              <Card data-testid="stat-severity-minor">
+                <CardContent className="p-4">
+                  <p className="text-xs text-muted-foreground">Minor</p>
+                  <p className="text-xl font-semibold text-yellow-600 dark:text-yellow-400">{minorCount}</p>
+                  <p className="text-xs text-muted-foreground">events</p>
+                </CardContent>
+              </Card>
+              <Card data-testid="stat-severity-moderate">
+                <CardContent className="p-4">
+                  <p className="text-xs text-muted-foreground">Moderate</p>
+                  <p className="text-xl font-semibold text-orange-600 dark:text-orange-400">{moderateCount}</p>
+                  <p className="text-xs text-muted-foreground">events</p>
+                </CardContent>
+              </Card>
+              <Card data-testid="stat-severity-major">
+                <CardContent className="p-4">
+                  <p className="text-xs text-muted-foreground">Major</p>
+                  <p className="text-xl font-semibold text-destructive">{majorCount}</p>
+                  <p className="text-xs text-muted-foreground">events</p>
+                </CardContent>
+              </Card>
+            </div>
+
+            <div className="grid gap-6 lg:grid-cols-2">
+              <div>
+                <h3 className="text-sm font-medium mb-2" data-testid="text-location-chart-title">SSO Frequency by Location</h3>
+                <LocationFrequencyChart events={events} />
+              </div>
+              <div>
+                <h3 className="text-sm font-medium mb-2" data-testid="text-scatter-chart-title">Volume vs Duration</h3>
+                <VolumeVsDurationScatter events={events} />
+              </div>
+            </div>
+          </CardContent>
+        </CollapsibleContent>
+      </Card>
+    </Collapsible>
+  );
+}
+
 function EventsTable({ events }: { events: SSOEvent[] }) {
   return (
     <ScrollArea className="h-[400px]">
@@ -481,6 +626,8 @@ export default function SSOEventsPage() {
         </Card>
       ) : (
         <>
+          <AnalyticsDashboard events={events} />
+
           <div className="grid gap-4 md:grid-cols-4">
             <Card>
               <CardHeader className="pb-2">

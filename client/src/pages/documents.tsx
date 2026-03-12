@@ -83,7 +83,7 @@ const appDocumentation: AppDocSection[] = [
     title: "Getting Started",
     icon: BookOpen,
     content: [
-      "Welcome to SSOAP Toolbox - a web-based sanitary sewer overflow analysis and planning application.",
+      "Welcome to RDII Toolbox - a web-based sanitary sewer overflow analysis and planning application.",
       "To begin, create a new project from the Dashboard or Projects page. Each project represents a sewershed or collection system you want to analyze.",
       "Import your SWMM5 input files (.inp) directly from the Dashboard using the Import SWMM Model button, or navigate to the Simulation page.",
     ],

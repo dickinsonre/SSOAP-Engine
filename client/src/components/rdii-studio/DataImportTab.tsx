@@ -1,11 +1,13 @@
 import { useState, useCallback } from "react";
-import { Upload, FileText, ArrowRight, Database, Calendar, Hash, AlertCircle, CheckCircle2 } from "lucide-react";
+import { Upload, FileText, ArrowRight, Database, Calendar, Hash, AlertCircle, CheckCircle2, TableProperties } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useCalibrationData } from "@/contexts/CalibrationDataContext";
 import type { ParsedTimeSeriesData } from "@/contexts/CalibrationDataContext";
 import { parseFile } from "@/lib/fileFormatParsers";
+import { ColumnMappingDialog } from "@/components/column-mapping-dialog";
+import type { MappedData } from "@/components/column-mapping-dialog";
 import {
   AreaChart,
   Area,
@@ -32,6 +34,35 @@ export function DataImportTab({ onNext }: DataImportTabProps) {
   const [loadingSample, setLoadingSample] = useState(false);
   const [fileError, setFileError] = useState<string | null>(null);
   const [importSuccess, setImportSuccess] = useState<string | null>(null);
+  const [columnMappingOpen, setColumnMappingOpen] = useState(false);
+
+  const handleMappedImport = useCallback((data: MappedData[], fileName: string) => {
+    const timestamps = data.map(d => d.timestamp);
+    const values = data.map(d => d.flow);
+
+    const hasRainfall = data.some(d => d.rainfall !== undefined);
+
+    setFlowData({
+      seriesName: `Flow - ${fileName}`,
+      timestamps,
+      values,
+      units: "MGD",
+      format: "csv",
+    });
+
+    if (hasRainfall) {
+      setRainfallData({
+        seriesName: `Rainfall - ${fileName}`,
+        timestamps,
+        values: data.map(d => d.rainfall ?? 0),
+        units: "in/hr",
+        format: "csv",
+      });
+    }
+
+    setImportSuccess(`Imported ${data.length} rows from ${fileName} via column mapping`);
+    setTimeout(() => setImportSuccess(null), 4000);
+  }, [setFlowData, setRainfallData]);
 
   const validateFile = useCallback((file: File): string | null => {
     const ext = "." + file.name.split(".").pop()?.toLowerCase();
@@ -155,6 +186,10 @@ export function DataImportTab({ onNext }: DataImportTabProps) {
             <Database className="mr-2 h-4 w-4" />
             {loadingSample ? "Loading..." : sampleDataLoaded ? "Sample Loaded" : "Load Sample Data"}
           </Button>
+          <Button variant="outline" onClick={() => setColumnMappingOpen(true)} data-testid="button-column-mapping">
+            <TableProperties className="mr-2 h-4 w-4" />
+            Column Mapping
+          </Button>
         </div>
       </div>
 
@@ -277,6 +312,12 @@ export function DataImportTab({ onNext }: DataImportTabProps) {
           </Button>
         </div>
       )}
+
+      <ColumnMappingDialog
+        open={columnMappingOpen}
+        onOpenChange={setColumnMappingOpen}
+        onImport={handleMappedImport}
+      />
     </div>
   );
 }

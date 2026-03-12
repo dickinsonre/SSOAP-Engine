@@ -9,6 +9,10 @@ import {
   Clock,
   BarChart3,
   ArrowRight,
+  DollarSign,
+  Activity,
+  Wrench,
+  ShieldAlert,
 } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -51,6 +55,246 @@ const chartConfig = {
   preRehab: { label: "Pre-Rehabilitation", color: "hsl(var(--destructive))" },
   postRehab: { label: "Post-Rehabilitation", color: "hsl(var(--chart-2))" },
 };
+
+function getConditionScore(assessment: ConditionAssessment): number {
+  const priorityScores = { high: 20, medium: 55, low: 85 };
+  let base = priorityScores[assessment.priority];
+  if (assessment.rdiiReduction > 0) {
+    base = Math.min(100, base + assessment.rdiiReduction * 0.3);
+  }
+  if (assessment.status === "completed") {
+    base = Math.min(100, base + 5);
+  }
+  return Math.round(Math.max(0, Math.min(100, base)));
+}
+
+function getPACPGrade(score: number): number {
+  if (score >= 90) return 1;
+  if (score >= 70) return 2;
+  if (score >= 50) return 3;
+  if (score >= 30) return 4;
+  return 5;
+}
+
+function getPACPLabel(grade: number): string {
+  const labels: Record<number, string> = { 1: "Excellent", 2: "Good", 3: "Fair", 4: "Poor", 5: "Failed" };
+  return labels[grade] || "Unknown";
+}
+
+function getPACPColor(grade: number): string {
+  const colors: Record<number, string> = {
+    1: "bg-green-500/10 text-green-600 dark:text-green-400 border-green-500/20",
+    2: "bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20",
+    3: "bg-yellow-500/10 text-yellow-600 dark:text-yellow-400 border-yellow-500/20",
+    4: "bg-orange-500/10 text-orange-600 dark:text-orange-400 border-orange-500/20",
+    5: "bg-red-500/10 text-red-600 dark:text-red-400 border-red-500/20",
+  };
+  return colors[grade] || "";
+}
+
+function getHydraulicCriticality(assessment: ConditionAssessment): number {
+  if (!assessment.preRehabRDII) return 50;
+  const totalR = assessment.preRehabRDII.totalR;
+  return Math.min(100, Math.round(totalR * 300));
+}
+
+function getSsoRisk(assessment: ConditionAssessment): number {
+  const priorityRisk = { high: 80, medium: 50, low: 20 };
+  let risk = priorityRisk[assessment.priority];
+  if (assessment.preRehabRDII && assessment.preRehabRDII.totalR > 0.15) {
+    risk = Math.min(100, risk + 15);
+  }
+  return risk;
+}
+
+function getRehabPriorityIndex(assessment: ConditionAssessment): number {
+  const conditionScore = getConditionScore(assessment);
+  const invertedCondition = 100 - conditionScore;
+  const hydraulic = getHydraulicCriticality(assessment);
+  const sso = getSsoRisk(assessment);
+  return Math.round(invertedCondition * 0.4 + hydraulic * 0.35 + sso * 0.25);
+}
+
+function getPriorityLabel(index: number): string {
+  if (index >= 80) return "Critical";
+  if (index >= 60) return "High";
+  if (index >= 40) return "Moderate";
+  if (index >= 20) return "Low";
+  return "Minimal";
+}
+
+function getPriorityBarColor(index: number): string {
+  if (index >= 80) return "bg-red-500";
+  if (index >= 60) return "bg-orange-500";
+  if (index >= 40) return "bg-yellow-500";
+  return "bg-green-500";
+}
+
+function getEstimatedLength(assessment: ConditionAssessment): number {
+  const area = assessment.preRehabRDII?.area || 50;
+  return Math.round(area * 52.8);
+}
+
+function getCostEstimates(assessment: ConditionAssessment) {
+  const length = getEstimatedLength(assessment);
+  const grade = getPACPGrade(getConditionScore(assessment));
+  const severityFactor = grade / 3;
+  return {
+    length,
+    cipp: { low: Math.round(length * 25 * severityFactor), high: Math.round(length * 45 * severityFactor) },
+    pipeBursting: { low: Math.round(length * 40 * severityFactor), high: Math.round(length * 80 * severityFactor) },
+    openCut: { low: Math.round(length * 100 * severityFactor), high: Math.round(length * 200 * severityFactor) },
+  };
+}
+
+function getRecommendedMethod(grade: number): string {
+  if (grade <= 2) return "CIPP Lining";
+  if (grade <= 3) return "CIPP Lining";
+  if (grade <= 4) return "Pipe Bursting";
+  return "Open Cut";
+}
+
+function formatCurrency(value: number): string {
+  if (value >= 1000000) return `$${(value / 1000000).toFixed(1)}M`;
+  if (value >= 1000) return `$${(value / 1000).toFixed(0)}K`;
+  return `$${value}`;
+}
+
+function PACPScoreSection({ assessment }: { assessment: ConditionAssessment }) {
+  const score = getConditionScore(assessment);
+  const structuralGrade = getPACPGrade(score);
+  const omGrade = Math.min(5, Math.max(1, structuralGrade + (assessment.status === "completed" ? -1 : 0)));
+
+  return (
+    <Card data-testid="card-pacp-scoring">
+      <CardHeader>
+        <CardTitle className="text-base">PACP Scoring</CardTitle>
+        <CardDescription>Structural and O&M grades based on condition assessment</CardDescription>
+      </CardHeader>
+      <CardContent>
+        <div className="grid gap-4 sm:grid-cols-3">
+          <div className="text-center">
+            <p className="text-sm text-muted-foreground mb-2">Condition Score</p>
+            <div className="text-3xl font-semibold font-mono" data-testid="text-condition-score">{score}</div>
+            <p className="text-xs text-muted-foreground mt-1">out of 100</p>
+          </div>
+          <div className="text-center">
+            <p className="text-sm text-muted-foreground mb-2">Structural Grade</p>
+            <Badge className={`text-lg px-4 py-1 ${getPACPColor(structuralGrade)}`} data-testid="badge-structural-grade">
+              {structuralGrade} - {getPACPLabel(structuralGrade)}
+            </Badge>
+          </div>
+          <div className="text-center">
+            <p className="text-sm text-muted-foreground mb-2">O&M Grade</p>
+            <Badge className={`text-lg px-4 py-1 ${getPACPColor(omGrade)}`} data-testid="badge-om-grade">
+              {omGrade} - {getPACPLabel(omGrade)}
+            </Badge>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+function RehabPrioritySection({ assessment }: { assessment: ConditionAssessment }) {
+  const index = getRehabPriorityIndex(assessment);
+  const label = getPriorityLabel(index);
+  const barColor = getPriorityBarColor(index);
+
+  return (
+    <Card data-testid="card-rehab-priority">
+      <CardHeader>
+        <CardTitle className="text-base">Rehabilitation Priority Score</CardTitle>
+        <CardDescription>Weighted index combining condition, hydraulic criticality, and SSO risk</CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="flex items-center justify-between gap-2">
+          <span className="text-sm font-medium" data-testid="text-priority-label">{label}</span>
+          <span className="text-sm font-mono text-muted-foreground" data-testid="text-priority-score">{index}/100</span>
+        </div>
+        <div className="h-3 w-full rounded-full bg-muted overflow-hidden">
+          <div
+            className={`h-full rounded-full transition-all ${barColor}`}
+            style={{ width: `${index}%` }}
+            data-testid="bar-priority-index"
+          />
+        </div>
+        <div className="grid gap-2 sm:grid-cols-3 text-xs text-muted-foreground">
+          <div className="flex items-center justify-between gap-1">
+            <span>Condition (40%)</span>
+            <span className="font-mono">{100 - getConditionScore(assessment)}</span>
+          </div>
+          <div className="flex items-center justify-between gap-1">
+            <span>Hydraulic (35%)</span>
+            <span className="font-mono">{getHydraulicCriticality(assessment)}</span>
+          </div>
+          <div className="flex items-center justify-between gap-1">
+            <span>SSO Risk (25%)</span>
+            <span className="font-mono">{getSsoRisk(assessment)}</span>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+function CostEstimationSection({ assessment }: { assessment: ConditionAssessment }) {
+  const costs = getCostEstimates(assessment);
+  const grade = getPACPGrade(getConditionScore(assessment));
+  const recommended = getRecommendedMethod(grade);
+
+  return (
+    <Card data-testid="card-cost-estimation">
+      <CardHeader>
+        <CardTitle className="text-base">Rehabilitation Cost Estimation</CardTitle>
+        <CardDescription>Estimated cost by method for {costs.length.toLocaleString()} LF of pipe</CardDescription>
+      </CardHeader>
+      <CardContent>
+        <div className="space-y-3">
+          <div className={`flex items-center justify-between gap-2 p-3 rounded-md ${recommended === "CIPP Lining" ? "bg-primary/5 ring-1 ring-primary/20" : "bg-muted/50"}`} data-testid="row-cost-cipp">
+            <div className="flex items-center gap-2">
+              <Wrench className="h-4 w-4 text-muted-foreground" />
+              <div>
+                <p className="text-sm font-medium">CIPP Lining</p>
+                <p className="text-xs text-muted-foreground">$25-45/LF</p>
+              </div>
+            </div>
+            <div className="text-right">
+              <p className="text-sm font-mono font-medium">{formatCurrency(costs.cipp.low)} - {formatCurrency(costs.cipp.high)}</p>
+              {recommended === "CIPP Lining" && <Badge className="bg-primary/10 text-primary text-xs">Recommended</Badge>}
+            </div>
+          </div>
+          <div className={`flex items-center justify-between gap-2 p-3 rounded-md ${recommended === "Pipe Bursting" ? "bg-primary/5 ring-1 ring-primary/20" : "bg-muted/50"}`} data-testid="row-cost-pipe-bursting">
+            <div className="flex items-center gap-2">
+              <Wrench className="h-4 w-4 text-muted-foreground" />
+              <div>
+                <p className="text-sm font-medium">Pipe Bursting</p>
+                <p className="text-xs text-muted-foreground">$40-80/LF</p>
+              </div>
+            </div>
+            <div className="text-right">
+              <p className="text-sm font-mono font-medium">{formatCurrency(costs.pipeBursting.low)} - {formatCurrency(costs.pipeBursting.high)}</p>
+              {recommended === "Pipe Bursting" && <Badge className="bg-primary/10 text-primary text-xs">Recommended</Badge>}
+            </div>
+          </div>
+          <div className={`flex items-center justify-between gap-2 p-3 rounded-md ${recommended === "Open Cut" ? "bg-primary/5 ring-1 ring-primary/20" : "bg-muted/50"}`} data-testid="row-cost-open-cut">
+            <div className="flex items-center gap-2">
+              <Wrench className="h-4 w-4 text-muted-foreground" />
+              <div>
+                <p className="text-sm font-medium">Open Cut</p>
+                <p className="text-xs text-muted-foreground">$100-200/LF</p>
+              </div>
+            </div>
+            <div className="text-right">
+              <p className="text-sm font-mono font-medium">{formatCurrency(costs.openCut.low)} - {formatCurrency(costs.openCut.high)}</p>
+              {recommended === "Open Cut" && <Badge className="bg-primary/10 text-primary text-xs">Recommended</Badge>}
+            </div>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
 
 function PriorityBadge({ priority }: { priority: ConditionAssessment["priority"] }) {
   const colors = {
@@ -255,6 +499,12 @@ function AssessmentDetails({
         </CardContent>
       </Card>
 
+      <PACPScoreSection assessment={assessment} />
+
+      <RehabPrioritySection assessment={assessment} />
+
+      <CostEstimationSection assessment={assessment} />
+
       <Card>
         <CardHeader>
           <CardTitle className="text-base">Assessment Notes</CardTitle>
@@ -430,6 +680,76 @@ export default function ConditionAssessmentPage() {
         </Card>
       ) : (
         <>
+          <div className="grid gap-4 md:grid-cols-4" data-testid="summary-analytics-cards">
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between gap-1 space-y-0 pb-2">
+                <CardTitle className="text-sm text-muted-foreground">Avg PACP Score</CardTitle>
+                <Activity className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-semibold font-mono" data-testid="text-avg-pacp-score">
+                  {assessments && assessments.length > 0
+                    ? (assessments.reduce((sum, a) => sum + getConditionScore(a), 0) / assessments.length).toFixed(1)
+                    : "N/A"}
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Grade {assessments && assessments.length > 0
+                    ? getPACPGrade(assessments.reduce((sum, a) => sum + getConditionScore(a), 0) / assessments.length)
+                    : "-"} avg
+                </p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between gap-1 space-y-0 pb-2">
+                <CardTitle className="text-sm text-muted-foreground">Total Rehab Cost Est.</CardTitle>
+                <DollarSign className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-semibold font-mono" data-testid="text-total-rehab-cost">
+                  {assessments && assessments.length > 0
+                    ? formatCurrency(assessments.reduce((sum, a) => {
+                        const costs = getCostEstimates(a);
+                        const grade = getPACPGrade(getConditionScore(a));
+                        const method = getRecommendedMethod(grade);
+                        if (method === "CIPP Lining") return sum + (costs.cipp.low + costs.cipp.high) / 2;
+                        if (method === "Pipe Bursting") return sum + (costs.pipeBursting.low + costs.pipeBursting.high) / 2;
+                        return sum + (costs.openCut.low + costs.openCut.high) / 2;
+                      }, 0))
+                    : "N/A"}
+                </div>
+                <p className="text-xs text-muted-foreground">Recommended methods avg</p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between gap-1 space-y-0 pb-2">
+                <CardTitle className="text-sm text-muted-foreground">Urgent Repairs</CardTitle>
+                <ShieldAlert className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-semibold text-red-600 dark:text-red-400" data-testid="text-urgent-repairs">
+                  {assessments
+                    ? assessments.filter(a => getPACPGrade(getConditionScore(a)) >= 4).length
+                    : 0}
+                </div>
+                <p className="text-xs text-muted-foreground">Pipes grade 4-5 (Poor/Failed)</p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between gap-1 space-y-0 pb-2">
+                <CardTitle className="text-sm text-muted-foreground">Avg RDII Reduction</CardTitle>
+                <TrendingDown className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-semibold text-green-600 dark:text-green-400 font-mono" data-testid="text-avg-rdii-reduction">
+                  {assessments && assessments.length > 0
+                    ? (assessments.reduce((sum, a) => sum + a.rdiiReduction, 0) / assessments.length).toFixed(1)
+                    : "0"}%
+                </div>
+                <p className="text-xs text-muted-foreground">Across all assessments</p>
+              </CardContent>
+            </Card>
+          </div>
+
           <div className="grid gap-4 md:grid-cols-4">
             <Card>
               <CardHeader className="pb-2">

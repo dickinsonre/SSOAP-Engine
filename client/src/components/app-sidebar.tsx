@@ -12,6 +12,7 @@ import {
   FileText,
   Waves,
   FlaskConical,
+  Map as MapIcon,
 } from "lucide-react";
 import {
   Sidebar,
@@ -72,6 +73,13 @@ const analysisTools = [
     title: "RDII Studio",
     url: "/rdii-studio",
     icon: FlaskConical,
+    badge: "NEW",
+    description: "Interactive RTK calibration with visual hydrograph fitting",
+  },
+  {
+    title: "Network Map",
+    url: "/network-map",
+    icon: MapIcon,
     badge: "NEW",
   },
 ];
@@ -143,7 +151,7 @@ export function AppSidebar() {
                   <SidebarMenuButton
                     asChild
                     isActive={location === item.url}
-                    tooltip={item.title}
+                    tooltip={item.description || item.title}
                   >
                     <Link href={item.url} data-testid={`nav-link-${item.title.toLowerCase().replace(/\s+/g, '-')}`}>
                       <item.icon className="h-4 w-4" />
