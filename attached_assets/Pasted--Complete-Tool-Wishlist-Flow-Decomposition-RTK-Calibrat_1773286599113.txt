@@ -1,0 +1,1410 @@
+# Complete Tool Wishlist: Flow Decomposition & RTK Calibration
+
+## The Full Decomposition Pipeline
+
+```
+Monitored Flow (Q_total)
+│
+├─── Phase 1: Import & QA/QC
+│
+├─── Phase 2: Dry/Wet Classification
+│
+├─── Phase 3: DWF Decomposition
+│    │
+│    ├── Q_gwi    (Groundwater Infiltration)
+│    ├── Q_bsf    (Base Sanitary Flow)
+│    └── Q_pattern (Diurnal Pattern × Q_bsf)
+│    │
+│    └── Q_dwf = Q_gwi + Q_bsf × Pattern(t)
+│
+├─── Phase 4: RDII Extraction
+│    │
+│    └── Q_rdii(t) = Q_total(t) − Q_dwf(t)
+│
+├─── Phase 5: RTK Calibration
+│    │
+│    ├── Solve-Once (direct)
+│    └── Optimization (GA, DE, NM...)
+│    │
+│    └── Q_rdii_model = Σ UH_i(R_i, T_i, K_i) * Rainfall
+│
+└─── Phase 6: Validation & Export
+```
+
+---
+
+## Phase 1: Data Import & QA/QC (8 Tools)
+
+### Tool 1.1 — Flow Data Importer
+
+```
+┌── Flow Data Import ─────────────────────────────────────────┐
+│                                                              │
+│  Source Format:                                              │
+│  ○ CSV (flexible columns)    ○ SWMM5 Interface File         │
+│  ○ Excel (.xlsx)             ○ USGS NWIS Download           │
+│  ○ ADS FloDar Export         ○ Hach FLO-TOTE Export         │
+│  ○ ICM SWMM Results          ○ Tab-delimited (.tsv)         │
+│                                                              │
+│  Column Mapping:                                             │
+│  ┌──────────────┬─────────────────┬────────────┐            │
+│  │ File Column  │ Maps To         │ Units      │            │
+│  ├──────────────┼─────────────────┼────────────┤            │
+│  │ DateTime     │ ▼ Timestamp     │            │            │
+│  │ Flow_MGD     │ ▼ Flow          │ ▼ MGD      │            │
+│  │ Depth_ft     │ ▼ Depth         │ ▼ ft       │            │
+│  │ Velocity_fps │ ▼ Velocity      │ ▼ ft/s     │            │
+│  └──────────────┴─────────────────┴────────────┘            │
+│                                                              │
+│  Time Step Detection: 15 min (auto-detected)                 │
+│  Records: 35,040 (365 days)                                  │
+│  Date Range: 2025-01-01 00:00 → 2025-12-31 23:45            │
+│                                                              │
+│  Flow Units: ▼ [MGD | CFS | GPM | LPS | CMS]               │
+│                                                              │
+│                        [Cancel]  [Import]                    │
+└──────────────────────────────────────────────────────────────┘
+```
+
+**Parameters:**
+| Parameter | Type | Options |
+|---|---|---|
+|`file_format`| enum | CSV, Excel, SWMM_DAT, USGS, ADS, Hach, ICM, TSV |
+|`timestamp_col`| string | auto-detected or user-mapped |
+|`flow_col`| string | user-mapped |
+|`depth_col`| string | optional |
+|`velocity_col`| string | optional |
+|`flow_units`| enum | MGD, CFS, GPM, LPS, CMS, L/s, m³/s |
+|`timestep`| duration | auto-detected, overridable |
+|`timezone`| enum | UTC, US/Eastern, US/Central, etc. |
+
+### Tool 1.2 — Rainfall Data Importer
+
+```
+┌── Rainfall Data Import ─────────────────────────────────────┐
+│                                                              │
+│  Source:                                                     │
+│  ○ CSV / Text file           ○ SWMM5 Rainfall .dat          │
+│  ○ NWS Hourly Precipitation  ○ NOAA LCD Export               │
+│  ○ Tipping bucket raw data   ○ NEXRAD Radar (gridded)       │
+│                                                              │
+│  Rain Gage ID: ▼ [RG-1 / RG-2 / new...]                    │
+│  Units: ▼ [inches | mm]                                      │
+│  Format: ▼ [Cumulative | Incremental | Intensity]            │
+│  Time Step: 15 min (auto-detected)                           │
+│                                                              │
+│  Preview:                                                    │
+│  ┌──────────────────────────────────────────────┐            │
+│  │  ▓▓                                          │            │
+│  │  ▓▓  ▓▓                                      │ ← Hyetograph│
+│  │  ▓▓  ▓▓▓▓▓▓                                  │            │
+│  │  ▓▓▓▓▓▓▓▓▓▓▓▓▓▓                              │            │
+│  └──────────────────────────────────────────────┘            │
+│                                                              │
+│  Total Events Detected: 47                                   │
+│  Total Rainfall: 42.3 inches                                 │
+│  Max Intensity: 2.1 in/hr                                    │
+└──────────────────────────────────────────────────────────────┘
+```
+
+### Tool 1.3 — Gap Detection & Filling
+
+```
+Algorithm Options:
+├── Detection
+│   ├── Missing timestamps (gaps > expected timestep)
+│   ├── Flat-line detection (constant value > N hours)
+│   ├── Stuck sensor (zero flow for unreasonable duration)
+│   └── Transmission dropouts (regular periodic gaps)
+│
+├── Filling Methods
+│   ├── Linear interpolation (short gaps < 2 hours)
+│   ├── Spline interpolation (medium gaps 2-12 hours)
+│   ├── Pattern-based fill (use DWF pattern for gaps during dry weather)
+│   ├── Neighbor gage substitution (rainfall)
+│   └── Flag-only (mark gaps, don't fill)
+│
+└── Parameters
+    ├── max_gap_to_fill: duration (default: 4 hours)
+    ├── flatline_threshold: hours (default: 6)
+    ├── zero_flow_threshold: hours (default: 2)
+    └── interpolation_method: enum [linear, spline, pattern, none]
+```
+
+### Tool 1.4 — Outlier Detection & Removal
+
+```
+Methods:
+├── Statistical
+│   ├── Z-score (|z| > 3.0)
+│   ├── Modified Z-score (MAD-based, robust to skew)
+│   ├── IQR fence (Q1 - 1.5×IQR, Q3 + 1.5×IQR)
+│   └── Grubbs test (single outlier)
+│
+├── Physical
+│   ├── Negative flow check
+│   ├── Maximum physically possible flow (from pipe capacity)
+│   ├── Maximum rate of change (dQ/dt threshold)
+│   └── Depth-velocity consistency (Q = V × A check)
+│
+├── Contextual
+│   ├── Flow without rainfall outside DWF envelope
+│   ├── No flow during expected peak hours
+│   └── Rainfall without flow response
+│
+└── Parameters
+    ├── z_score_threshold: float (default: 3.0)
+    ├── iqr_multiplier: float (default: 1.5)
+    ├── max_flow: float (pipe full capacity)
+    ├── max_dq_dt: float (max rate of change, CFS/min)
+    └── action: enum [flag, remove, replace_interpolate]
+```
+
+### Tool 1.5 — Time Step Alignment
+
+```
+Purpose: Align flow and rainfall to common time step
+
+Parameters:
+├── target_timestep: duration [5min, 10min, 15min, 30min, 1hr]
+├── aggregation_method_flow: enum [average, instantaneous, volume-weighted]
+├── aggregation_method_rain: enum [sum, average]
+├── alignment: enum [start_of_interval, end_of_interval, center]
+└── handle_missing: enum [interpolate, zero, flag]
+
+Output:
+├── Aligned flow time series
+├── Aligned rainfall time series
+├── Alignment report (records shifted, interpolated, flagged)
+└── Common date range (intersection of both series)
+```
+
+### Tool 1.6 — Flow Data Scattergraph
+
+```
+Purpose: Depth vs Velocity plot for QA/QC of flow monitoring data
+
+Display:
+├── Scatter plot: Depth (y) vs Velocity (x)
+├── Theoretical Manning curve overlay for pipe geometry
+├── Color code by: time of day / dry vs wet / date range
+├── Identify clusters indicating:
+│   ├── Normal flow (follows Manning curve)
+│   ├── Surcharge (high depth, low velocity)
+│   ├── Backwater (points above Manning curve)
+│   ├── Deposition/blockage (shifted curve)
+│   └── Sensor error (impossible combinations)
+│
+└── Parameters
+    ├── pipe_diameter: float
+    ├── pipe_slope: float
+    ├── mannings_n: float
+    └── highlight_mode: enum [time, condition, date]
+```
+
+### Tool 1.7 — Data Summary Dashboard
+
+```
+Display:
+├── Flow statistics table (min, max, mean, median, std, P10, P90)
+├── Rainfall statistics (total, count of events, max intensity)
+├── Time series overview plot (full monitoring period)
+├── Monthly/weekly box plots
+├── Data completeness percentage bar
+├── Highlighted gaps and outliers on the time series
+└── Quality score: percentage of records passing all QA checks
+```
+
+### Tool 1.8 — Multi-Monitor Comparison
+
+```
+Purpose: When multiple flow monitors exist in the same system,
+         compare upstream vs downstream for consistency
+
+Features:
+├── Side-by-side time series
+├── Upstream sum vs downstream total
+├── Mass balance check (downstream ≥ sum of upstream)
+├── Scatter: upstream sum vs downstream measured
+├── Lag correlation (travel time estimation)
+└── Identify monitors with systematic bias
+```
+
+---
+
+## Phase 2: Dry/Wet Weather Classification (5 Tools)
+
+### Tool 2.1 — Rainfall Event Delineator
+
+```
+┌── Rainfall Event Definition ────────────────────────────────┐
+│                                                              │
+│  Minimum Inter-Event Time (MIT):  [6    ] hours              │
+│  Minimum Rainfall Depth:          [0.10 ] inches             │
+│  Minimum Rainfall Duration:       [1    ] hours              │
+│  Antecedent Dry Period (ADP):     [0    ] hours              │
+│                                                              │
+│  ┌────────────────────────────────────────────────────────┐  │
+│  │ Event│ Start        │ End          │ Depth │ Duration  │  │
+│  ├──────┼──────────────┼──────────────┼───────┼───────────┤  │
+│  │ E01  │ 01/15 14:00  │ 01/15 22:00  │ 1.24" │ 8.0 hr   │  │
+│  │ E02  │ 01/23 06:00  │ 01/23 12:00  │ 0.45" │ 6.0 hr   │  │
+│  │ E03  │ 02/02 18:00  │ 02/03 08:00  │ 2.10" │ 14.0 hr  │  │
+│  │ ...  │              │              │       │           │  │
+│  └──────┴──────────────┴──────────────┴───────┴───────────┘  │
+│                                                              │
+│  Events Found: 47    Dry Days Available: 218                 │
+│                                                              │
+│  [Auto-Detect Events]  [Manual Adjust]  [Accept]             │
+└──────────────────────────────────────────────────────────────┘
+```
+
+**Parameters:**
+| Parameter | Default | Range | Description |
+|---|---|---|---|
+|`min_interevent_time`| 6 hr | 2-24 hr | Gap between events to be considered separate |
+|`min_rainfall_depth`| 0.10 in | 0.01-1.0 in | Below this, event is ignored |
+|`min_duration`| 1 hr | 0.25-6 hr | Minimum event duration |
+|`antecedent_dry_period`| 0 hr | 0-72 hr | Required dry period before event |
+|`recovery_period`| 12 hr | 6-72 hr | Time after rain ends for RDII to recede |
+
+### Tool 2.2 — Dry Day Selector
+
+```
+Purpose: Identify true dry weather days for DWF analysis
+
+Criteria:
+├── No rainfall during the day (24 hours)
+├── No rainfall in preceding N hours (antecedent dryness)
+├── No rainfall in following N hours (no early-onset effects)
+├── Flow is within normal DWF range (no residual RDII)
+├── Not a holiday (optional: affects DWF patterns)
+├── Weekday / Weekend classification
+└── Seasonal grouping (optional)
+
+Parameters:
+├── antecedent_dry_hours: int (default: 48)
+├── subsequent_dry_hours: int (default: 12)
+├── exclude_holidays: bool (default: true)
+├── holiday_list: list of dates
+├── seasonal_groups: enum [none, quarterly, monthly]
+├── min_dry_days_required: int (default: 7)
+└── flow_anomaly_threshold: float (default: 1.5 × median)
+
+Output:
+├── List of qualifying dry days
+├── Classification: weekday / weekend / holiday
+├── Seasonal assignment
+├── Visual calendar heatmap showing dry (green) / wet (blue) / excluded (red)
+└── Count summary: "Found 42 weekday dry days, 18 weekend dry days"
+```
+
+### Tool 2.3 — RDII Influence Period Detector
+
+```
+Purpose: Determine when RDII response starts and ends for each event
+
+Method:
+├── Start: Flow exceeds DWF envelope by threshold amount
+├── End: Flow returns to within DWF envelope
+│
+├── Alternative methods:
+│   ├── Slope-based: detect inflection point in rising limb
+│   ├── Statistical: flow > DWF_mean + N × DWF_stddev
+│   ├── Pattern-based: deviation from expected DWF pattern > threshold
+│   └── Manual: user clicks start/end on hydrograph
+│
+└── Parameters
+    ├── rise_threshold: float (% above DWF, default: 10%)
+    ├── recession_threshold: float (% above DWF, default: 5%)
+    ├── min_rdii_duration: hours (default: 2)
+    ├── max_rdii_duration: hours (default: 168 = 7 days)
+    └── method: enum [envelope, slope, statistical, manual]
+```
+
+### Tool 2.4 — Antecedent Moisture Tracker
+
+```
+Purpose: Track soil moisture state to improve RDII prediction
+
+Methods:
+├── API (Antecedent Precipitation Index)
+│   ├── API(t) = k × API(t-1) + P(t)
+│   ├── k = decay coefficient (0.85 - 0.98)
+│   └── Classify: dry (API < 0.5"), moderate (0.5-1.5"), wet (> 1.5")
+│
+├── 5-Day Antecedent Rainfall
+│   └── Simple sum of rainfall in preceding 5 days
+│
+├── SCS Antecedent Moisture Condition (AMC)
+│   ├── AMC I:  < 0.5" in preceding 5 days (dry)
+│   ├── AMC II: 0.5-1.1" (average)
+│   └── AMC III: > 1.1" (wet)
+│
+└── Parameters
+    ├── method: enum [API, 5day, AMC]
+    ├── decay_factor: float (for API, default: 0.90)
+    ├── lookback_days: int (for 5-day method, default: 5)
+    └── output: time series of moisture index
+```
+
+### Tool 2.5 — Event Characterization Table
+
+```
+Purpose: Build a table of all events with key metrics for event selection
+
+Output Table:
+┌──────┬────────┬───────┬──────┬───────┬────────┬──────────┬────────┬────────┐
+│Event │ Date   │ Depth │ Dur  │ Peak  │ ADP    │ API      │ RDII   │ R-val  │
+│      │        │ (in)  │ (hr) │ (in/h)│ (days) │ (in)     │ Vol    │ (%)    │
+├──────┼────────┼───────┼──────┼───────┼────────┼──────────┼────────┼────────┤
+│ E01  │ 01/15  │ 1.24  │ 8.0  │ 0.45  │ 12.5   │ 0.32     │ 2.1 MG │ 4.8%  │
+│ E02  │ 01/23  │ 0.45  │ 6.0  │ 0.22  │ 7.8    │ 1.15     │ 1.8 MG │ 11.3% │
+│ E03  │ 02/02  │ 2.10  │ 14.0 │ 0.68  │ 9.2    │ 0.45     │ 5.4 MG │ 7.3%  │
+│ ...  │        │       │      │       │        │          │        │        │
+└──────┴────────┴───────┴──────┴───────┴────────┴──────────┴────────┴────────┘
+
+Sortable by any column
+Filterable by: depth range, season, AMC, ADP, R-value range
+Selectable: checkbox to include/exclude events from calibration
+```
+
+---
+
+## Phase 3: DWF Decomposition (7 Tools)
+
+### Tool 3.1 — Minimum Night Flow (MNF) Analyzer
+
+```
+┌── Minimum Night Flow Analysis ──────────────────────────────┐
+│                                                              │
+│  Night Window:  [00:00] to [05:00]                           │
+│  Method:                                                     │
+│  ○ Absolute minimum in window                                │
+│  ○ Average of lowest N values in window                      │
+│  ○ Percentile (P10) of night flows                           │
+│  ○ Rolling minimum (window = 7 days)                         │
+│                                                              │
+│  ┌────────────────────────────────────────────────────────┐  │
+│  │           Dry Day Night Flows                          │  │
+│  │  0.45 ──────────────────── mean                        │  │
+│  │  0.40 ─ ─ ─ ─ ─ ─ ─ ─ ─  median                      │  │
+│  │  ● ● ●  ●  ● ●●  ● ●● ● ● ●  ● ● ●                  │  │
+│  │  0.32 ..................... P10                          │  │
+│  │  0.28 ___________________  minimum                     │  │
+│  └────────────────────────────────────────────────────────┘  │
+│                                                              │
+│  Results:                                                    │
+│  ├── Mean MNF:     0.45 MGD                                  │
+│  ├── Median MNF:   0.40 MGD                                  │
+│  ├── Minimum MNF:  0.28 MGD                                  │
+│  └── Std Dev MNF:  0.08 MGD                                  │
+│                                                              │
+│  GWI Estimate (from MNF):                                    │
+│  ├── GWI Factor:   [0.90] × MNF  (editable, 0.0 - 1.0)     │
+│  ├── Estimated GWI: 0.36 MGD                                 │
+│  └── GWI per inch-mile: 850 gpd/in-mi                        │
+│                                                              │
+│  Seasonal MNF Trend:                                         │
+│  ┌────────────────────────────────────────────────────────┐  │
+│  │  0.55 ─        ──────                                  │  │
+│  │  0.45 ──    ──        ────                             │  │
+│  │  0.35 ─  ──                ────── ──                   │  │
+│  │  0.25 ─                              ─                 │  │
+│  │       J  F  M  A  M  J  J  A  S  O  N  D              │  │
+│  └────────────────────────────────────────────────────────┘  │
+│  ↑ Higher GWI in spring (high water table)                   │
+└──────────────────────────────────────────────────────────────┘
+```
+
+**Parameters:**
+| Parameter | Default | Range | Description |
+|---|---|---|---|
+|`night_start`| 00:00 | 22:00-02:00 | Start of MNF window |
+|`night_end`| 05:00 | 03:00-07:00 | End of MNF window |
+|`method`| median | min, mean, median, P10, rolling_min | MNF calculation method |
+|`gwi_factor`| 0.90 | 0.0-1.0 | Fraction of MNF attributed to GWI |
+|`rolling_window`| 7 | 3-30 | Days for rolling minimum |
+|`seasonal_grouping`| monthly | none, monthly, quarterly, custom | Seasonal breakdown |
+
+### Tool 3.2 — GWI Seasonal Model
+
+```
+Purpose: Model GWI variation across seasons
+
+Methods:
+├── Constant GWI
+│   └── Single value from MNF analysis (simplest)
+│
+├── Monthly GWI
+│   └── Different GWI for each month (from monthly MNF)
+│
+├── Sinusoidal Model
+│   ├── GWI(t) = GWI_mean + A × sin(2π(t - φ)/365)
+│   ├── A = seasonal amplitude
+│   └── φ = phase shift (day of peak GWI)
+│
+├── Regression on Water Table
+│   ├── GWI(t) = a + b × WaterTable(t)
+│   └── Requires nearby USGS groundwater well data
+│
+└── Parameters
+    ├── model_type: enum [constant, monthly, sinusoidal, regression]
+    ├── gwi_mean: float (from MNF analysis)
+    ├── amplitude: float (sinusoidal only)
+    ├── phase_day: int (sinusoidal only, day of year for peak)
+    └── water_table_data: optional time series
+```
+
+### Tool 3.3 — Base Sanitary Flow (BSF) Calculator
+
+```
+Purpose: Determine the non-GWI component of dry weather base flow
+
+Calculation:
+  BSF = Average_DWF − GWI
+
+Methods:
+├── Per-Capita Method
+│   ├── BSF = Population × GPCD (gallons per capita per day)
+│   ├── GPCD typically 60-120 gpd/capita
+│   └── Requires population estimate for sewershed
+│
+├── Direct Measurement
+│   ├── BSF = Mean_DWF − GWI
+│   └── Uses dry day average minus GWI estimate
+│
+├── Billing Data Method
+│   ├── BSF = (Water_Billed × Return_Factor)
+│   ├── Return factor typically 0.7-0.9
+│   └── Requires water billing records
+│
+└── Parameters
+    ├── method: enum [per_capita, direct, billing]
+    ├── population: int (for per_capita)
+    ├── gpcd: float (default: 80 gpd/capita)
+    ├── return_factor: float (for billing, default: 0.85)
+    ├── commercial_flow: float (additional non-residential base flow)
+    └── industrial_flow: float (additional industrial base flow)
+
+Output:
+├── BSF value (flow units per day)
+├── BSF as fraction of total DWF
+├── BSF + GWI = total average DWF (verification)
+└── Per-capita comparison to typical ranges
+```
+
+### Tool 3.4 — Diurnal Pattern Extractor
+
+```
+┌── Diurnal Pattern Analysis ─────────────────────────────────┐
+│                                                              │
+│  Dry Days Used: 42 weekday, 18 weekend                       │
+│  Method: ○ Mean  ○ Median  ○ P50  ○ Weighted                │
+│                                                              │
+│  ┌────────────────────────────────────────────────────────┐  │
+│  │  1.6 ─              ████                               │  │
+│  │  1.4 ─          ████    ████                           │  │
+│  │  1.2 ─      ████            ████     ████              │  │
+│  │  1.0 ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ████─ ─████─ ─       │  │
+│  │  0.8 ─                              ████    ████       │  │
+│  │  0.6 ─ ████                                    ████    │  │
+│  │  0.4 ─     ████                                   ███  │  │
+│  │       0  3  6  9  12  15  18  21  24                   │  │
+│  │                                                         │  │
+│  │  ── Weekday  ── Weekend  ─ ─ Average  ░░ Envelope      │  │
+│  └────────────────────────────────────────────────────────┘  │
+│                                                              │
+│  Pattern Output (24 multipliers, sum = 24.0):                │
+│  ┌────────────────────────────────────────────────────────┐  │
+│  │ Hr │  0   1   2   3   4   5   6   7   8   9  10  11  │  │
+│  │ WD │.52 .43 .38 .36 .42 .68 1.1 1.4 1.5 1.4 1.3 1.2 │  │
+│  │ WE │.55 .46 .41 .39 .44 .58 .82 1.1 1.3 1.4 1.4 1.3 │  │
+│  ├────────────────────────────────────────────────────────┤  │
+│  │ Hr │ 12  13  14  15  16  17  18  19  20  21  22  23  │  │
+│  │ WD │1.1 1.0 .95 .98 1.1 1.3 1.4 1.3 1.1 .95 .78 .62 │  │
+│  │ WE │1.2 1.1 1.0 1.1 1.2 1.3 1.3 1.2 1.1 .98 .80 .65 │  │
+│  └────────────────────────────────────────────────────────┘  │
+│                                                              │
+│  Pattern Validation:                                         │
+│  ├── Sum of multipliers: 24.00 ✓                             │
+│  ├── Peak multiplier: 1.52 (typical: 1.3-2.0) ✓             │
+│  ├── Minimum multiplier: 0.36 (typical: 0.2-0.6) ✓          │
+│  └── Peak/min ratio: 4.22 (typical: 2.0-6.0) ✓              │
+│                                                              │
+│  [Use Weekday Pattern]  [Use Average]  [Edit Manually]       │
+└──────────────────────────────────────────────────────────────┘
+```
+
+**Parameters:**
+| Parameter | Default | Range | Description |
+|---|---|---|---|
+|`method`| median | mean, median, P50, trimmed_mean | How to average dry days |
+|`separate_weekend`| true | bool | Separate weekday/weekend patterns |
+|`timestep`| hourly | 15min, 30min, hourly | Pattern resolution |
+|`normalization`| sum_to_N | sum_to_N, peak_to_1, mean_to_1 | How multipliers are scaled |
+|`smoothing`| none | none, moving_avg_3, spline | Smooth the pattern |
+|`envelope_percentiles`| [10, 90] | — | Show variability envelope |
+|`exclude_dates`| [] | list | Manually exclude anomalous dry days |
+
+### Tool 3.5 — DWF Reconstruction Engine
+
+```
+Purpose: Reconstruct complete DWF time series for entire monitoring period
+
+Formula:
+  Q_dwf(t) = GWI(t) + BSF × Pattern(hour, daytype)
+
+Where:
+├── GWI(t) = groundwater infiltration (constant or seasonal)
+├── BSF = base sanitary flow (MGD or CFS)
+├── Pattern(hour, daytype) = diurnal multiplier
+│   ├── Weekday pattern (Mon-Fri)
+│   ├── Weekend pattern (Sat-Sun)
+│   └── Holiday pattern (optional)
+└── daytype = weekday / weekend / holiday
+
+Output:
+├── Complete Q_dwf time series at monitoring timestep
+├── Overlay plot: Q_observed vs Q_dwf_reconstructed
+├── Residual: Q_observed − Q_dwf (should be ~0 on dry days)
+├── Goodness of fit on dry days:
+│   ├── R² (coefficient of determination)
+│   ├── RMSE
+│   ├── Nash-Sutcliffe Efficiency
+│   └── Percent volume error
+└── DWF components breakdown pie chart
+```
+
+### Tool 3.6 — Interactive DWF Pattern Editor
+
+```
+Purpose: Let engineer manually adjust the diurnal pattern with visual feedback
+
+┌── Pattern Editor ───────────────────────────────────────────┐
+│                                                              │
+│  ┌────────────────────────────────────────────────────────┐  │
+│  │                                                        │  │
+│  │  1.5 ─     ●───●                                      │  │
+│  │  1.3 ─   ●       ●───●                  ●             │  │
+│  │  1.1 ─ ●               ●──●         ●──●  ●           │  │
+│  │  0.9 ─                      ●───●──●        ●         │  │
+│  │  0.7 ─                                       ●──●     │  │
+│  │  0.5 ─ ●                                         ●──● │  │
+│  │  0.3 ─   ●──●                                         │  │
+│  │       0  3  6  9  12  15  18  21  24                   │  │
+│  │                                                        │  │
+│  │  ← Drag points to adjust pattern                       │  │
+│  └────────────────────────────────────────────────────────┘  │
+│                                                              │
+│  Sum: 24.00 ✓    [Reset to Calculated]  [Smooth]  [Apply]   │
+│                                                              │
+│  Live Preview:                                               │
+│  ┌────────────────────────────────────────────────────────┐  │
+│  │  ── Observed (dry day)                                 │  │
+│  │  ── Reconstructed DWF (updates in real time)           │  │
+│  └────────────────────────────────────────────────────────┘  │
+└──────────────────────────────────────────────────────────────┘
+```
+
+### Tool 3.7 — DWF Validation Report
+
+```
+Output:
+├── Comparison table: predicted vs observed for each dry day
+├── Residual histogram (should be centered on zero)
+├── Residual time series (should show no pattern)
+├── Q-Q plot of residuals (should be normal)
+├── Autocorrelation of residuals (should be ~0)
+├── Monthly volume comparison
+├── Flagged dry days where model fits poorly
+└── Overall quality score (1-10)
+```
+
+---
+
+## Phase 4: RDII Extraction (4 Tools)
+
+### Tool 4.1 — RDII Hydrograph Calculator
+
+```
+Formula:
+  Q_rdii(t) = Q_observed(t) − Q_dwf(t)
+
+  where Q_rdii(t) = max(0, Q_observed(t) − Q_dwf(t))
+
+Handling negative values:
+├── Option A: Set negative RDII to zero (most common)
+├── Option B: Allow small negatives (indicates DWF overestimate)
+├── Option C: Adjust DWF baseline to eliminate negatives
+└── Option D: Flag for review
+
+Output for each event:
+├── RDII hydrograph time series
+├── RDII volume (integrate under curve)
+├── RDII peak flow
+├── RDII duration
+├── Time to peak (from rainfall start)
+├── Recession duration
+└── R-value = RDII_volume / (Rainfall_depth × Sewershed_area)
+```
+
+### Tool 4.2 — R-Value (Capture Coefficient) Analyzer
+
+```
+Purpose: Calculate and analyze R-values across all events
+
+┌── R-Value Analysis ─────────────────────────────────────────┐
+│                                                              │
+│  Sewershed Area: [450] acres                                 │
+│                                                              │
+│  ┌──────────────────────────────────────────────────────┐    │
+│  │ Event│ Rain  │ RDII Vol │ R-value │ ADP  │ AMC      │    │
+│  ├──────┼───────┼──────────┼─────────┼──────┼──────────┤    │
+│  │ E01  │ 1.24" │ 2.10 MG  │  4.8%   │ 12.5d│ Dry      │    │
+│  │ E02  │ 0.45" │ 1.80 MG  │ 11.3%   │  7.8d│ Moderate │    │
+│  │ E03  │ 2.10" │ 5.40 MG  │  7.3%   │  9.2d│ Dry      │    │
+│  │ E04  │ 0.85" │ 3.20 MG  │ 10.6%   │  2.1d│ Wet      │    │
+│  └──────┴───────┴──────────┴─────────┴──────┴──────────┘    │
+│                                                              │
+│  Average R-value: 8.5%                                       │
+│  Range: 4.8% — 11.3%                                        │
+│  Weighted Average (by volume): 7.8%                          │
+│                                                              │
+│  R-value Scatter:                                            │
+│  ┌────────────────────────────────────────────────────────┐  │
+│  │  12% ─       ●E02                                     │  │
+│  │  10% ─               ●E04                              │  │
+│  │   8% ─                    ●E03                         │  │
+│  │   6% ─  ●E01                                          │  │
+│  │   4% ─                                                 │  │
+│  │       0    0.5   1.0   1.5   2.0   2.5                │  │
+│  │              Rainfall Depth (in) →                      │  │
+│  └────────────────────────────────────────────────────────┘  │
+│                                                              │
+│  Severity Classification (EPA SSOAP):                        │
+│  ├── R < 3%:   Low RDII ────── 0 events                     │
+│  ├── 3-6%:     Moderate ────── 1 event  (E01)               │
+│  ├── 6-10%:    Significant ─── 2 events (E03, E04)          │
+│  └── > 10%:    Severe ──────── 1 event  (E02)               │
+└──────────────────────────────────────────────────────────────┘
+```
+
+### Tool 4.3 — RDII Volume Balance
+
+```
+Purpose: Verify mass balance of flow decomposition
+
+Check:
+├── Total Monitored Volume (entire period)
+├── = DWF Volume + RDII Volume + Unaccounted
+│
+├── DWF Volume = GWI Volume + BSF Volume
+├── RDII Volume = Σ(event RDII volumes)
+├── Unaccounted = Total − DWF − RDII (should be ~0)
+│
+└── Report:
+    ├── Total monitored: 245.6 MG
+    ├── DWF component:   198.2 MG (80.7%)
+    │   ├── GWI:         65.4 MG  (26.6%)
+    │   └── BSF:        132.8 MG  (54.1%)
+    ├── RDII component:   45.8 MG (18.6%)
+    ├── Unaccounted:       1.6 MG  (0.7%) ✓
+    └── Balance error: 0.7% (acceptable if < 5%)
+```
+
+### Tool 4.4 — RDII Hydrograph Shape Analyzer
+
+```
+Purpose: Characterize the shape of each RDII hydrograph for initial
+         RTK parameter estimation
+
+Metrics per event:
+├── Time to peak (hours from rainfall centroid)
+├── Peak RDII flow
+├── Recession time constant (exponential fit)
+├── Hydrograph width at 50% of peak
+├── Centroid time (first moment of RDII hydrograph)
+├── Skewness (asymmetry of hydrograph)
+├── Number of distinct peaks (1 = simple, 2+ = multi-response)
+│
+├── Shape Classification:
+│   ├── "Fast response dominant" — sharp peak, quick recession
+│   ├── "Slow response dominant" — broad peak, long tail
+│   ├── "Mixed response" — two distinct humps
+│   └── "Sustained response" — long plateau
+│
+└── Initial RTK Estimate (from shape):
+    ├── R1_init, T1_init, K1_init (fast: first peak timing)
+    ├── R2_init, T2_init, K2_init (medium: second peak or inflection)
+    └── R3_init, T3_init, K3_init (slow: recession tail)
+```
+
+---
+
+## Phase 5: RTK Calibration (10 Tools)
+
+### Tool 5.1 — RTK Parameter Definition
+
+```
+SWMM5 RTK Unit Hydrograph Parameters:
+
+Each hydrograph set has 3 triangular unit hydrographs:
+UH1 = Fast response  (direct inflow: roof drains, manhole covers)
+UH2 = Medium response (defect infiltration: cracked pipes, bad joints)
+UH3 = Slow response   (groundwater: high water table seepage)
+
+Parameters per UH:
+├── R = fraction of rainfall volume entering sewer (dimensionless, 0-1)
+├── T = time to peak of unit hydrograph (hours)
+├── K = ratio of recession limb time to time to peak (dimensionless, >1)
+└── Ia = initial abstraction (inches or mm, optional, per UH set)
+
+Total parameters: 9 core (R1,T1,K1, R2,T2,K2, R3,T3,K3)
+                + 1 optional (Ia)
+                = 10 per sewershed per month/season
+
+Full SWMM5 RDII definition:
+├── 12 months × 3 UH × 3 params = 108 parameters (maximum)
+├── Seasonal groups (e.g., 4 seasons × 9 = 36 parameters)
+└── Single set: 9 parameters (minimum, most common for calibration)
+```
+
+### Tool 5.2 — Unit Hydrograph Visualizer
+
+```
+┌── RTK Unit Hydrograph ──────────────────────────────────────┐
+│                                                              │
+│  Sewershed: [Downtown-01 ▼]   Area: 450 acres               │
+│                                                              │
+│  ┌──── Parameter Sliders ──────────────────────────────────┐ │
+│  │                                                          │ │
+│  │  UH1 (Fast — Inflow)           🔵 Blue                  │ │
+│  │  R1: [0.040] ═══●═══════════  (0.001 - 0.20)            │ │
+│  │  T1: [1.5  ] ════●══════════  (0.5 - 6 hr)              │ │
+│  │  K1: [2.0  ] ════●══════════  (1.0 - 5.0)               │ │
+│  │                                                          │ │
+│  │  UH2 (Medium — Infiltration)    🟠 Orange                │ │
+│  │  R2: [0.030] ══●════════════  (0.001 - 0.15)            │ │
+│  │  T2: [6.0  ] ════════●══════  (2 - 24 hr)               │ │
+│  │  K2: [2.5  ] ═════●═════════  (1.0 - 8.0)               │ │
+│  │                                                          │ │
+│  │  UH3 (Slow — GW Response)      🟢 Green                  │ │
+│  │  R3: [0.020] ═●═════════════  (0.001 - 0.10)            │ │
+│  │  T3: [24.0 ] ══════════●════  (6 - 168 hr)              │ │
+│  │  K3: [3.0  ] ══════●════════  (1.0 - 12.0)              │ │
+│  │                                                          │ │
+│  │  Ia: [0.10 ] ══●════════════  (0.0 - 0.5 in)            │ │
+│  │                                                          │ │
+│  │  R_total: 0.090 (9.0%)    R1+R2+R3 ≤ [0.30]             │ │
+│  └──────────────────────────────────────────────────────────┘ │
+│                                                              │
+│  ┌────────────────────────────────────────────────────────┐  │
+│  │  Unit Hydrograph Shapes (for 1 inch of rainfall)       │  │
+│  │                                                        │  │
+│  │  Q  🔵                                                 │  │
+│  │  ↑ ╱  ╲    🟠                                          │  │
+│  │  │╱    ╲  ╱    ╲                                       │  │
+│  │  │      ╲╱      ╲     🟢                               │  │
+│  │  │       ╳        ╲  ╱     ╲                           │  │
+│  │  │      ╱ ╲        ╲╱       ╲                          │  │
+│  │  │     ╱   ╲       ╱╲        ╲──────                   │  │
+│  │  └──────────────────────────────────── t (hours) →     │  │
+│  │  0    6    12    18    24    36    48    72              │  │
+│  │                                                        │  │
+│  │  ── UH_combined (sum of three)                         │  │
+│  └────────────────────────────────────────────────────────┘  │
+│                                                              │
+│  Hydrograph Properties:                                      │
+│  ├── UH1 peak: 0.027 CFS/acre at t=1.5 hr, base=4.5 hr     │
+│  ├── UH2 peak: 0.006 CFS/acre at t=6.0 hr, base=21.0 hr    │
+│  ├── UH3 peak: 0.002 CFS/acre at t=24.0 hr, base=96.0 hr   │
+│  └── Combined peak: 0.028 CFS/acre at t=1.8 hr              │
+└──────────────────────────────────────────────────────────────┘
+```
+
+### Tool 5.3 — Solve-Once (Direct Calculation)
+
+```
+Purpose: Calculate RTK parameters directly from observed RDII hydrograph
+         shape without iterative optimization. Fast, deterministic, gives
+         a good starting point.
+
+Methods:
+
+Method A — Peak Decomposition
+├── Find the first distinct peak → sets T1
+├── Find the second peak or inflection → sets T2
+├── Fit exponential to recession tail → sets T3, K3
+├── Allocate volume: area under each sub-hydrograph → R1, R2, R3
+├── K1, K2 from width of each peak at half-height
+└── Pro: Fast. Con: Requires distinct peaks.
+
+Method B — Moment Matching
+├── Compute moments of observed RDII hydrograph:
+│   ├── M0 = total volume → R_total
+│   ├── M1 = centroid time → weighted average of T values
+│   └── M2 = variance → spread of responses
+├── Allocate across 3 UHs using assumed proportions
+├── Solve T and K from moment equations
+└── Pro: Works for any shape. Con: Non-unique solution.
+
+Method C — Exponential Decomposition
+├── Fit sum of 3 exponentials to recession limb:
+│   Q(t) = A1×exp(-t/τ1) + A2×exp(-t/τ2) + A3×exp(-t/τ3)
+├── Convert time constants τ to T and K:
+│   T_i ≈ τ_i / K_i, where K_i estimated from shape
+├── Convert amplitudes A to R values:
+│   R_i = A_i × (T_i × (1+K_i)) / (2 × rainfall_depth × area)
+└── Pro: Robust. Con: Sensitive to recession start point.
+
+Method D — Template Library
+├── Use typical RTK values for similar sewersheds as starting point
+├── Scale R-values to match observed total R-value
+├── Adjust T-values to match observed time to peak
+├── Library entries based on:
+│   ├── Pipe material (VCP, PVC, concrete, brick)
+│   ├── Pipe age (new, 20yr, 40yr, 60yr+)
+│   ├── Soil type (sand, silt, clay)
+│   └── Sewer type (separate, partially combined)
+└── Pro: Works with minimal data. Con: Generic.
+
+Output:
+├── Initial RTK parameter set: (R1,T1,K1, R2,T2,K2, R3,T3,K3, Ia)
+├── Predicted RDII hydrograph from these parameters
+├── Overlay on observed RDII
+├── Goodness-of-fit metrics (see Tool 5.6)
+└── "Use as starting point for optimization" button
+```
+
+### Tool 5.4 — Constrained Optimization Engine
+
+```
+Purpose: Find optimal RTK parameters by minimizing error between
+         predicted and observed RDII, subject to physical constraints
+
+┌── Optimization Setup ───────────────────────────────────────┐
+│                                                              │
+│  Algorithm: ▼                                                │
+│  ┌───────────────────────────────────────────────────────┐   │
+│  │ ○ Genetic Algorithm (GA)         — robust, global     │   │
+│  │ ○ Differential Evolution (DE)    — fast, global       │   │
+│  │ ○ Particle Swarm (PSO)           — parallel, global   │   │
+│  │ ○ Nelder-Mead (Simplex)          — local, fast        │   │
+│  │ ○ L-BFGS-B                       — gradient, bounded  │   │
+│  │ ○ Simulated Annealing (SA)       — global, slow       │   │
+│  │ ○ Bayesian Optimization          — few evaluations    │   │
+│  │ ○ Multi-Start Nelder-Mead        — global + local     │   │
+│  │ ○ CMA-ES                         — adaptive, robust   │   │
+│  │ ○ NSGA-II (Multi-objective)      — Pareto front       │   │
+│  └───────────────────────────────────────────────────────┘   │
+│                                                              │
+│  Objective Function: ▼                                       │
+│  ┌───────────────────────────────────────────────────────┐   │
+│  │ ○ SSE   — Sum of Squared Errors                       │   │
+│  │ ○ RMSE  — Root Mean Square Error                      │   │
+│  │ ○ NSE   — Nash-Sutcliffe Efficiency (maximize)        │   │
+│  │ ○ KGE   — Kling-Gupta Efficiency (maximize)           │   │
+│  │ ○ PBIAS — Percent Bias                                │   │
+│  │ ○ Multi — Weighted: α×PeakErr + β×VolumeErr + γ×RMSE │   │
+│  └───────────────────────────────────────────────────────┘   │
+│                                                              │
+│  Multi-Objective Weights (if Multi selected):                │
+│  ├── Peak Flow Error:  α = [0.30] ═══●══════                │
+│  ├── Volume Error:     β = [0.30] ═══●══════                │
+│  ├── RMSE:             γ = [0.25] ══●═══════                │
+│  └── Shape (r²):       δ = [0.15] ═●════════                │
+│                                                              │
+│  Events for Calibration:                                     │
+│  ☑ E01 (1.24", 01/15)  ☑ E03 (2.10", 02/02)               │
+│  ☐ E02 (0.45", 01/23)  ☑ E04 (0.85", 02/18)               │
+│  ☑ E05 (1.55", 03/05)  ☐ E06 (0.32", 03/12)               │
+│                                                              │
+│  ☐ Use separate RTK per event (then average)                 │
+│  ☑ Calibrate single RTK set across all selected events       │
+│                                                              │
+│       [Use Solve-Once as Starting Point]                     │
+│       [Run Optimization]      [Stop]                         │
+└──────────────────────────────────────────────────────────────┘
+```
+
+### Tool 5.5 — Constraint Editor
+
+```
+┌── RTK Parameter Constraints ────────────────────────────────┐
+│                                                              │
+│  ┌─────────────────────────────────────────────────────┐     │
+│  │ Parameter │   Min   │  Start  │   Max   │  Fixed?  │     │
+│  ├───────────┼─────────┼─────────┼─────────┼──────────┤     │
+│  │ R1        │  0.001  │  0.040  │  0.200  │    ☐     │     │
+│  │ T1 (hr)   │  0.5    │  1.5    │  6.0    │    ☐     │     │
+│  │ K1        │  1.0    │  2.0    │  5.0    │    ☐     │     │
+│  │ R2        │  0.001  │  0.030  │  0.150  │    ☐     │     │
+│  │ T2 (hr)   │  2.0    │  6.0    │  24.0   │    ☐     │     │
+│  │ K2        │  1.0    │  2.5    │  8.0    │    ☐     │     │
+│  │ R3        │  0.001  │  0.020  │  0.100  │    ☐     │     │
+│  │ T3 (hr)   │  6.0    │  24.0   │  168.0  │    ☐     │     │
+│  │ K3        │  1.0    │  3.0    │  12.0   │    ☐     │     │
+│  │ Ia (in)   │  0.0    │  0.10   │  0.50   │    ☐     │     │
+│  └───────────┴─────────┴─────────┴─────────┴──────────┘     │
+│                                                              │
+│  Inequality Constraints:                                     │
+│  ☑ R1 + R2 + R3 ≤ [0.30]    (total capture ≤ 30%)          │
+│  ☑ T1 < T2 < T3             (ordering of responses)         │
+│  ☑ T2 ≥ T1 × [1.5]         (minimum separation)            │
+│  ☑ T3 ≥ T2 × [2.0]         (minimum separation)            │
+│  ☐ R1 ≥ R2 ≥ R3            (fast response dominates)       │
+│  ☐ R3 ≥ R2 ≥ R1            (slow response dominates)       │
+│  ☑ K1 ≤ K2 ≤ K3            (slower responses are broader)  │
+│                                                              │
+│  Physical Reasonability:                                     │
+│  ☑ UH1 base time ≤ [12] hours                               │
+│  ☑ UH2 base time ≤ [72] hours                               │
+│  ☑ UH3 base time ≤ [336] hours (14 days)                    │
+│  ☑ Peak RDII ≤ [pipe capacity × safety factor]              │
+│                                                              │
+│  Presets:                                                     │
+│  [EPA Typical]  [Tight Bounds]  [Wide Search]  [Reset]      │
+└──────────────────────────────────────────────────────────────┘
+```
+
+### Tool 5.6 — Goodness-of-Fit Dashboard
+
+```
+┌── Calibration Fit Metrics ──────────────────────────────────┐
+│                                                              │
+│  ┌─────────────────┬──────────┬───────────┬────────────────┐│
+│  │ Metric          │ Value    │ Target    │ Rating         ││
+│  ├─────────────────┼──────────┼───────────┼────────────────┤│
+│  │ NSE             │  0.87    │ > 0.75    │ ████████░░ Good││
+│  │ KGE             │  0.82    │ > 0.70    │ ████████░░ Good││
+│  │ R²              │  0.91    │ > 0.80    │ █████████░ V.G.││
+│  │ RMSE (CFS)      │  0.45    │ < 1.0     │ █████████░ V.G.││
+│  │ PBIAS (%)       │  -3.2%   │ ±10%      │ █████████░ V.G.││
+│  │ Peak Error (%)  │  -8.5%   │ ±15%      │ ████████░░ Good││
+│  │ Volume Error (%)│  +2.1%   │ ±10%      │ █████████░ V.G.││
+│  │ Time-to-Peak Err│  +0.5 hr │ ±2 hr     │ █████████░ V.G.││
+│  └─────────────────┴──────────┴───────────┴────────────────┘│
+│                                                              │
+│  Overall Rating: ★★★★☆ GOOD                                 │
+│                                                              │
+│  Per-Event Breakdown:                                        │
+│  ┌───────┬───────┬───────┬──────────┬───────────┐           │
+│  │ Event │ NSE   │ R²    │ Peak Err │ Vol Err   │           │
+│  ├───────┼───────┼───────┼──────────┼───────────┤           │
+│  │ E01   │ 0.92  │ 0.94  │  -5.2%   │  +1.8%   │ ★★★★★    │
+│  │ E03   │ 0.85  │ 0.89  │ -12.3%   │  +3.5%   │ ★★★★☆    │
+│  │ E04   │ 0.88  │ 0.91  │  -6.1%   │  -1.2%   │ ★★★★☆    │
+│  │ E05   │ 0.82  │ 0.87  │ -11.8%   │  +4.1%   │ ★★★★☆    │
+│  └───────┴───────┴───────┴──────────┴───────────┘           │
+│                                                              │
+│  Diagnostic Guidance:                                        │
+│  ⚠ Peak consistently under-predicted by 5-12%               │
+│    → Consider increasing R1 or decreasing T1                │
+│  ✓ Volume match is excellent (< 5% for all events)          │
+│  ✓ Recession shape fits well                                 │
+└──────────────────────────────────────────────────────────────┘
+```
+
+**All fit metrics:**
+| Metric | Formula | Perfect | Acceptable |
+|---|---|---|---|
+| NSE | 1 − Σ(Qobs-Qsim)² / Σ(Qobs-Q̄obs)² | 1.0 | > 0.65 |
+| KGE | 1 − √[(r-1)² + (β-1)² + (γ-1)²] | 1.0 | > 0.50 |
+| R² | [Σ(Qobs-Q̄)(Qsim-Q̄)]² / [Σ(Qobs-Q̄)² × Σ(Qsim-Q̄)²] | 1.0 | > 0.70 |
+| RMSE | √[Σ(Qobs-Qsim)² / N] | 0.0 | < 15% of mean |
+| PBIAS | 100 × Σ(Qsim-Qobs) / Σ(Qobs) | 0.0% | ±15% |
+| Peak Error | (Qpeak_sim − Qpeak_obs) / Qpeak_obs × 100 | 0.0% | ±20% |
+| Volume Error | (Vol_sim − Vol_obs) / Vol_obs × 100 | 0.0% | ±15% |
+| MAE | Σ | Qobs-Qsim | / N | 0.0 | context-dependent |
+| d (index of agreement) | 1 − Σ(Qobs-Qsim)² / Σ( | Qsim-Q̄ | + | Qobs-Q̄ | )² | 1.0 | > 0.80 |
+
+### Tool 5.7 — Optimization Progress Monitor
+
+```
+┌── Optimization Progress ────────────────────────────────────┐
+│                                                              │
+│  Algorithm: Differential Evolution                           │
+│  Status: Running ████████████████░░░░░░░░ 67%               │
+│  Generation: 134 / 200                                       │
+│  Population: 50                                              │
+│  Evaluations: 6,700                                          │
+│  Elapsed: 2m 34s    Estimated remaining: 1m 15s              │
+│                                                              │
+│  ┌── Convergence ─────────────────────────────────────────┐  │
+│  │  Obj                                                   │  │
+│  │  0.8 ─╲                                                │  │
+│  │  0.4 ─  ╲                                              │  │
+│  │  0.2 ─    ╲──╲                                         │  │
+│  │  0.1 ─        ╲───────────────────────── converging    │  │
+│  │       0    50    100    150    200                      │  │
+│  │              Generation →                               │  │
+│  └────────────────────────────────────────────────────────┘  │
+│                                                              │
+│  Current Best:                                               │
+│  R1=0.042  T1=1.4  K1=2.1  │  NSE=0.871                     │
+│  R2=0.028  T2=5.8  K2=2.6  │  RMSE=0.42                     │
+│  R3=0.019  T3=22   K3=3.2  │  PeakErr=-7.8%                 │
+│  Ia=0.08                    │  VolErr=+1.9%                  │
+│                                                              │
+│  ┌── Live Hydrograph Preview ─────────────────────────────┐  │
+│  │  ── Observed      ── Current Best Simulation           │  │
+│  │                                                        │  │
+│  │     ●●                                                 │  │
+│  │   ●●  ●●●                                              │  │
+│  │  ●      ●●●─── predicted tracks closely                │  │
+│  │ ●          ●●●                                         │  │
+│  │●               ●●●●●●                                  │  │
+│  └────────────────────────────────────────────────────────┘  │
+│                                                              │
+│  [Pause] [Stop & Keep Best] [Reset & Restart]                │
+└──────────────────────────────────────────────────────────────┘
+```
+
+### Tool 5.8 — Multi-Event Calibration Manager
+
+```
+Purpose: Calibrate one RTK set against multiple storm events simultaneously
+
+Strategy Options:
+├── Option A: Combined Objective
+│   ├── Minimize: Σ_events [ w_i × ObjectiveFunction(event_i) ]
+│   ├── Weight events by: equal, by volume, by peak, by importance
+│   └── Single optimization → single RTK set
+│
+├── Option B: Per-Event → Average
+│   ├── Optimize each event independently → get N RTK sets
+│   ├── Average parameters (mean, median, or weighted)
+│   ├── Report parameter variability across events
+│   └── Good for understanding which events are consistent
+│
+├── Option C: Sequential Refinement
+│   ├── Calibrate on largest event first
+│   ├── Use result as starting point for next event
+│   ├── Iterate until parameters stabilize
+│   └── Weight toward events with better data quality
+│
+└── Option D: Split Sample
+    ├── Calibrate on subset of events
+    ├── Validate on held-out events
+    ├── Report calibration vs validation fit
+    └── Best practice for predictive confidence
+
+Parameters:
+├── strategy: enum [combined, per_event_average, sequential, split_sample]
+├── event_weights: float[] (per event weight, sum to 1)
+├── calibration_events: list (for split sample)
+├── validation_events: list (for split sample)
+└── convergence_tolerance: float (default: 0.001)
+```
+
+### Tool 5.9 — Seasonal RTK Editor
+
+```
+Purpose: Define different RTK parameters for different months/seasons
+         (SWMM5 supports monthly RTK parameter sets)
+
+┌── Seasonal RTK Parameters ──────────────────────────────────┐
+│                                                              │
+│  Seasonal Grouping: ▼                                        │
+│  ○ Single (all months same)                                  │
+│  ○ 2-Season (wet/dry)                                        │
+│  ○ 4-Season (spring/summer/fall/winter)                      │
+│  ○ Monthly (12 sets)                                         │
+│  ○ Custom groups                                             │
+│                                                              │
+│  ┌──────────────────────────────────────────────────────┐    │
+│  │ Season     │ R1    T1    K1  │ R2    T2    K2  │ ... │    │
+│  ├────────────┼─────────────────┼─────────────────┼─────┤    │
+│  │ Spring     │ 0.05  1.2  2.0 │ 0.04  5.5  2.5 │ ... │    │
+│  │ (Mar-May)  │                 │                 │     │    │
+│  ├────────────┼─────────────────┼─────────────────┼─────┤    │
+│  │ Summer     │ 0.03  1.5  2.2 │ 0.02  6.0  2.8 │ ... │    │
+│  │ (Jun-Aug)  │                 │                 │     │    │
+│  ├────────────┼─────────────────┼─────────────────┼─────┤    │
+│  │ Fall       │ 0.04  1.3  2.1 │ 0.03  5.8  2.6 │ ... │    │
+│  │ (Sep-Nov)  │                 │                 │     │    │
+│  ├────────────┼─────────────────┼─────────────────┼─────┤    │
+│  │ Winter     │ 0.06  1.0  1.8 │ 0.05  5.0  2.3 │ ... │    │
+│  │ (Dec-Feb)  │                 │                 │     │    │
+│  └────────────┴─────────────────┴─────────────────┴─────┘    │
+│                                                              │
+│  Seasonal R-value Pattern:                                   │
+│  ┌────────────────────────────────────────────────────────┐  │
+│  │  15% ─                                                 │  │
+│  │  12% ─ ████                                            │  │
+│  │   9% ─ ████████         ████                           │  │
+│  │   6% ─ ████████████████████████████                    │  │
+│  │   3% ─ ████████████████████████████████████████        │  │
+│  │       J  F  M  A  M  J  J  A  S  O  N  D              │  │
+│  └────────────────────────────────────────────────────────┘  │
+│  ↑ Higher R in spring (saturated soils, high water table)    │
+│                                                              │
+│  [Calibrate Each Season]  [Copy Spring → All]  [Export]      │
+└──────────────────────────────────────────────────────────────┘
+```
+
+### Tool 5.10 — Parameter Sensitivity Analysis
+
+```
+Purpose: Understand which RTK parameters have the most influence
+         on model output, guiding calibration effort
+
+Methods:
+├── One-at-a-Time (OAT)
+│   ├── Vary each parameter ±20% while holding others fixed
+│   ├── Plot: parameter value vs objective function
+│   └── Identifies individual parameter influence
+│
+├── Morris Method (Elementary Effects)
+│   ├── Efficient global screening method
+│   ├── Ranks parameters by importance
+│   └── Identifies interactions
+│
+├── Sobol Sensitivity Indices
+│   ├── Variance-based global sensitivity
+│   ├── First-order indices (individual effects)
+│   ├── Total-order indices (including interactions)
+│   └── Requires more model evaluations
+│
+└── Output:
+    ├── Tornado diagram (parameter ranking by influence)
+    ├── Spider plot (normalized sensitivity)
+    ├── Interaction heatmap (which params interact)
+    └── Recommendation: "Focus calibration effort on R1, T1, R2"
+```
+
+---
+
+## Phase 6: Validation, Comparison & Export (7 Tools)
+
+### Tool 6.1 — Observed vs Predicted Overlay
+
+```
+┌── Calibration Results ──────────────────────────────────────┐
+│                                                              │
+│  Event: E03 (02/02, 2.10", 14 hr)                           │
+│                                                              │
+│  ┌────────────────────────────────────────────────────────┐  │
+│  │  ▓▓                                 ← Rainfall        │  │
+│  │  ▓▓▓▓▓▓                             (top, inverted)   │  │
+│  │  ▓▓▓▓▓▓▓▓▓▓▓▓▓▓                                      │  │
+│  │───────────────────────────────────────────────────────│  │
+│  │     ●●●                                               │  │
+│  │   ●●   ●●●                                            │  │
+│  │  ●        ●●── Predicted (RTK model)                  │  │
+│  │ ●──●        ●●●                                       │  │
+│  │●    ── Observed  ●●●                                  │  │
+│  │                     ●●●●●●●                           │  │
+│  │                           ●●●●●●●●●●●●●●●●           │  │
+│  │. . . . . . . . . . . . . . . . . . . . . . DWF       │  │
+│  └────────────────────────────────────────────────────────┘  │
+│                                                              │
+│  Decomposed Components:                                      │
+│  ┌────────────────────────────────────────────────────────┐  │
+│  │  █████████████████████████████████████  DWF (base)    │  │
+│  │  ░░░░░░░░░░░                           UH1 (fast)     │  │
+│  │       ▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒                 UH2 (medium)   │  │
+│  │              ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓     UH3 (slow)     │  │
+│  │  ───────────────────────────────── Observed total      │  │
+│  └────────────────────────────────────────────────────────┘  │
+│                                                              │
+│  Toggle: ☑ DWF  ☑ UH1  ☑ UH2  ☑ UH3  ☑ Observed  ☑ Sum   │
+│                                                              │
+│  Residual Plot:                                              │
+│  ┌────────────────────────────────────────────────────────┐  │
+│  │  +0.5 ─    ●                                          │  │
+│  │     0 ─ ─●─ ─●─●──●──●──●──●──●──●──●──●──●──●──●─  │  │
+│  │  -0.5 ─       ●                                       │  │
+│  └────────────────────────────────────────────────────────┘  │
+└──────────────────────────────────────────────────────────────┘
+```
+
+### Tool 6.2 — Cross-Validation Report
+
+```
+Purpose: Validate calibrated parameters on events NOT used for calibration
+
+Output:
+├── Calibration events: fit metrics table
+├── Validation events: fit metrics table
+├── Comparison: does validation fit degrade significantly?
+├── Parameter stability: do per-event optimal values vary widely?
+├── Recommendation:
+│   ├── "Parameters are robust — validation NSE within 0.05 of calibration"
+│   ├── "Warning: validation NSE 0.20 lower — possible overfitting"
+│   └── "Consider seasonal RTK — winter events fit poorly with summer params"
+└── Visual: paired box plots of metrics (calibration vs validation)
+```
+
+### Tool 6.3 — Multi-Sewershed Comparison
+
+```
+Purpose: Compare RTK parameters and R-values across sewersheds
+
+┌── Sewershed Comparison ─────────────────────────────────────┐
+│                                                              │
+│  ┌────────────┬───────┬──────┬──────┬───────┬──────────────┐│
+│  │ Sewershed  │R_total│ R1   │ T1   │ R2    │ Condition    ││
+│  ├────────────┼───────┼──────┼──────┼───────┼──────────────┤│
+│  │ Downtown-1 │ 9.0%  │ 0.04 │ 1.5  │ 0.03  │ Poor (1965) ││
+│  │ Northside  │ 4.2%  │ 0.02 │ 1.8  │ 0.01  │ Good (2010) ││
+│  │ Riverside  │ 14.5% │ 0.08 │ 1.0  │ 0.04  │ Poor (1958) ││
+│  │ Eastside   │ 6.8%  │ 0.03 │ 2.0  │ 0.02  │ Fair (1985) ││
+│  └────────────┴───────┴──────┴──────┴───────┴──────────────┘│
+│                                                              │
+│  R-Value Ranking (prioritize for rehabilitation):            │
+│  ███████████████████████████████████████  Riverside  14.5%   │
+│  ████████████████████████                Downtown-1  9.0%    │
+│  ██████████████████                      Eastside    6.8%    │
+│  ███████████                             Northside   4.2%    │
+│                                                              │
+│  Correlation Analysis:                                       │
+│  ├── R-value vs Pipe Age: r = 0.85 (strong positive)        │
+│  ├── R-value vs Pipe Material: VCP highest, PVC lowest      │
+│  ├── R1 (fast) vs # defects: r = 0.79                       │
+│  └── R3 (slow) vs water table depth: r = -0.72              │
+└──────────────────────────────────────────────────────────────┘
+```
+
+### Tool 6.4 — Pre/Post Rehabilitation Comparison
+
+```
+Purpose: Compare RTK parameters before and after sewer rehabilitation
+         to quantify RDII reduction effectiveness
+
+Output:
+├── Before RTK parameters vs After RTK parameters
+├── R-value reduction (% and absolute)
+├── Cost per gallon of RDII removed
+├── Payback period estimate
+├── Statistical significance test (are the differences real?)
+└── RDII reduction visualization:
+    ┌──────────────────────────────────────────┐
+    │  Before:  ████████████████████  14.5%    │
+    │  After:   █████████            6.2%      │
+    │  Reduced: ███████████████████   8.3%     │
+    │  Reduction: 57%                          │
+    └──────────────────────────────────────────┘
+```
+
+### Tool 6.5 — SWMM5 INP Export
+
+```
+Purpose: Generate SWMM5 [RDII] and [HYDROGRAPHS] sections
+
+Output:
+[RDII]
+;;Node    UHGroup   SewerArea
+;;------  --------  ---------
+J1        UH01      450
+
+[HYDROGRAPHS]
+;;Name    Month/All  Response  R        T        K        Dmax  Drec  D0
+;;------  ---------  --------  -------  -------  ------   ----  ----  ----
+UH01      ALL        SHORT     0.0420   1.40     2.10     0     0     0
+UH01      ALL        MEDIUM    0.0280   5.80     2.60     0     0     0
+UH01      ALL        LONG      0.0190   22.00    3.20     0     0     0
+UH01      ALL        IA        0.08     0.0      0.0
+
+;; Or with seasonal variation:
+UH01      JAN        SHORT     0.0550   1.20     1.90     0     0     0
+UH01      JAN        MEDIUM    0.0380   5.00     2.30     0     0     0
+...
+
+Export Options:
+├── Single [HYDROGRAPHS] section for direct INP insertion
+├── Complete .inp file with RDII nodes configured
+├── CSV of parameters for external tools
+├── JSON for API consumption
+└── SSOAP-compatible format (legacy support)
+```
+
+### Tool 6.6 — Calibration Report Generator
+
+```
+Purpose: Produce a professional calibration report document
+
+Sections:
+├── Project Information
+│   ├── Sewershed name, area, pipe miles
+│   ├── Monitoring period and flow meter location
+│   └── Rainfall gage location and data source
+│
+├── Data Summary
+│   ├── Flow monitoring statistics
+│   ├── Rainfall statistics and event summary
+│   └── Data quality assessment
+│
+├── DWF Analysis
+│   ├── Dry day selection criteria and results
+│   ├── MNF analysis and GWI estimate
+│   ├── BSF calculation
+│   └── Diurnal pattern (with plot)
+│
+├── RDII Analysis
+│   ├── Event delineation results
+│   ├── R-value summary table
+│   └── RDII volume summary
+│
+├── RTK Calibration
+│   ├── Optimization method and settings
+│   ├── Constraint summary
+│   ├── Final RTK parameters
+│   ├── Goodness-of-fit metrics
+│   └── Observed vs predicted plots (all events)
+│
+├── Validation
+│   ├── Cross-validation results
+│   └── Parameter stability analysis
+│
+└── Conclusions & Recommendations
+    ├── RDII severity classification
+    ├── Recommended rehabilitation priorities
+    └── Suggested next steps
+
+Format: PDF, HTML, Markdown
+```
+
+### Tool 6.7 — Parameter History Tracker
+
+```
+Purpose: Track how RTK parameters evolve across calibration iterations
+         and across different analysts/projects
+
+Features:
+├── Version history of each parameter set
+├── Diff between versions (what changed and why)
+├── Analyst notes for each calibration run
+├── Undo/redo to any previous parameter set
+├── Compare fit metrics across versions
+└── "Accept" / "Reject" workflow for parameter review
+```
+
+---
+
+## Complete Tool Inventory Summary
+
+| Phase | # | Tools |
+|---|---|---|
+| 1. Import & QA/QC | 8 | Importers, gap filling, outliers, alignment, scattergraph, summary, multi-monitor |
+| 2. Dry/Wet Classification | 5 | Event delineator, dry day selector, RDII period detector, moisture tracker, event table |
+| 3. DWF Decomposition | 7 | MNF analyzer, GWI model, BSF calculator, pattern extractor, DWF reconstruction, pattern editor, validation |
+| 4. RDII Extraction | 4 | RDII calculator, R-value analyzer, volume balance, shape analyzer |
+| 5. RTK Calibration | 10 | Parameter definition, UH visualizer, solve-once, optimizer, constraints, GoF dashboard, progress monitor, multi-event manager, seasonal editor, sensitivity analysis |
+| 6. Validation & Export | 7 | Overlay plots, cross-validation, multi-sewershed comparison, pre/post rehab, INP export, report generator, parameter history |
+| **Total** | **41 tools** |  |
+
+---
+
+## Implementation Priority for Your SSOAP Toolbox
+
+| Sprint | Week | Tools | Rationale |
+|---|---|---|---|
+| **MVP** | 1-2 | 1.1, 1.2, 2.1, 2.2, 3.1, 3.4, 3.5, 4.1, 5.2 | Minimum viable flow decomposition pipeline |
+| **Core Calibration** | 3-4 | 5.3, 5.4, 5.5, 5.6, 5.7, 6.1 | Solve-once + optimization with visual feedback |
+| **Production Quality** | 5-6 | 1.3, 1.4, 4.2, 4.3, 5.8, 6.5 | Data quality, volume balance, multi-event, export |
+| **Professional** | 7-8 | 3.2, 3.6, 5.9, 5.10, 6.2, 6.3, 6.6 | Seasonal, sensitivity, validation, reporting |
+| **Advanced** | 9-10 | 1.5, 1.6, 1.7, 1.8, 2.3, 2.4, 2.5, 3.3, 3.7, 4.4, 6.4, 6.7 | Full professional toolkit |
+
+This gives you a **10-week roadmap from zero to the most complete open-source RDII calibration tool in existence** — directly replacing and surpassing the discontinued EPA SSOAP toolbox.

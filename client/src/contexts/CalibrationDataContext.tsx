@@ -1,5 +1,10 @@
-import { createContext, useContext, useState, useEffect, useCallback } from "react";
+import { createContext, useContext, useState, useCallback } from "react";
 import type { ReactNode } from "react";
+import type {
+  GapFillResult, OutlierResult, DryDay, MNFResult, GWIModelResult,
+  BSFResult, DWFPattern, RValueResult, VolumeBalance, GoodnessOfFit,
+  SensitivityResult, EventCharacterization, RainfallEvent, TimeSeriesPoint,
+} from "@/lib/flowDecomposition";
 
 export interface ParsedTimeSeriesData {
   timestamps: Date[];
@@ -92,6 +97,32 @@ interface CalibrationDataContextType {
   setQaqcRainfallResult: (result: QAQCResult | null) => void;
   sampleDataLoaded: boolean;
   loadSampleData: () => Promise<void>;
+  gapFillResult: GapFillResult | null;
+  setGapFillResult: (r: GapFillResult | null) => void;
+  outlierResult: OutlierResult | null;
+  setOutlierResult: (r: OutlierResult | null) => void;
+  dryDays: DryDay[];
+  setDryDays: (d: DryDay[]) => void;
+  rainfallEvents: RainfallEvent[];
+  setRainfallEvents: (e: RainfallEvent[]) => void;
+  mnfResult: MNFResult | null;
+  setMnfResult: (r: MNFResult | null) => void;
+  gwiModel: GWIModelResult | null;
+  setGwiModel: (r: GWIModelResult | null) => void;
+  bsfResult: BSFResult | null;
+  setBsfResult: (r: BSFResult | null) => void;
+  dwfPattern: DWFPattern | null;
+  setDwfPattern: (p: DWFPattern | null) => void;
+  rValueResult: RValueResult | null;
+  setRValueResult: (r: RValueResult | null) => void;
+  volumeBalance: VolumeBalance | null;
+  setVolumeBalance: (v: VolumeBalance | null) => void;
+  sensitivityResults: SensitivityResult[];
+  setSensitivityResults: (r: SensitivityResult[]) => void;
+  eventCharacterizations: EventCharacterization[];
+  setEventCharacterizations: (e: EventCharacterization[]) => void;
+  moistureIndex: TimeSeriesPoint[];
+  setMoistureIndex: (m: TimeSeriesPoint[]) => void;
 }
 
 const CalibrationDataContext = createContext<CalibrationDataContextType | null>(null);
@@ -136,6 +167,19 @@ export function CalibrationDataProvider({ children }: { children: ReactNode }) {
   const [qaqcFlowResult, setQaqcFlowResult] = useState<QAQCResult | null>(null);
   const [qaqcRainfallResult, setQaqcRainfallResult] = useState<QAQCResult | null>(null);
   const [sampleDataLoaded, setSampleDataLoaded] = useState(false);
+  const [gapFillResult, setGapFillResult] = useState<GapFillResult | null>(null);
+  const [outlierResult, setOutlierResult] = useState<OutlierResult | null>(null);
+  const [dryDays, setDryDays] = useState<DryDay[]>([]);
+  const [rainfallEvents, setRainfallEvents] = useState<RainfallEvent[]>([]);
+  const [mnfResult, setMnfResult] = useState<MNFResult | null>(null);
+  const [gwiModel, setGwiModel] = useState<GWIModelResult | null>(null);
+  const [bsfResult, setBsfResult] = useState<BSFResult | null>(null);
+  const [dwfPattern, setDwfPattern] = useState<DWFPattern | null>(null);
+  const [rValueResult, setRValueResult] = useState<RValueResult | null>(null);
+  const [volumeBalance, setVolumeBalance] = useState<VolumeBalance | null>(null);
+  const [sensitivityResults, setSensitivityResults] = useState<SensitivityResult[]>([]);
+  const [eventCharacterizations, setEventCharacterizations] = useState<EventCharacterization[]>([]);
+  const [moistureIndex, setMoistureIndex] = useState<TimeSeriesPoint[]>([]);
 
   const loadSampleData = useCallback(async () => {
     try {
@@ -155,7 +199,6 @@ export function CalibrationDataProvider({ children }: { children: ReactNode }) {
         }
       }
     } catch {
-      // Sample data not available
     }
   }, []);
 
@@ -172,6 +215,19 @@ export function CalibrationDataProvider({ children }: { children: ReactNode }) {
         qaqcFlowResult, setQaqcFlowResult,
         qaqcRainfallResult, setQaqcRainfallResult,
         sampleDataLoaded, loadSampleData,
+        gapFillResult, setGapFillResult,
+        outlierResult, setOutlierResult,
+        dryDays, setDryDays,
+        rainfallEvents, setRainfallEvents,
+        mnfResult, setMnfResult,
+        gwiModel, setGwiModel,
+        bsfResult, setBsfResult,
+        dwfPattern, setDwfPattern,
+        rValueResult, setRValueResult,
+        volumeBalance, setVolumeBalance,
+        sensitivityResults, setSensitivityResults,
+        eventCharacterizations, setEventCharacterizations,
+        moistureIndex, setMoistureIndex,
       }}
     >
       {children}

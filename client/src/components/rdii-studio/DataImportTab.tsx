@@ -1,13 +1,16 @@
 import { useState, useCallback } from "react";
-import { Upload, FileText, ArrowRight, Database, Calendar, Hash, AlertCircle, CheckCircle2, TableProperties } from "lucide-react";
+import { Upload, FileText, ArrowRight, Database, Calendar, Hash, AlertCircle, CheckCircle2, TableProperties, ChevronDown, ChevronRight, Copy, Check, Terminal } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { useCalibrationData } from "@/contexts/CalibrationDataContext";
 import type { ParsedTimeSeriesData } from "@/contexts/CalibrationDataContext";
 import { parseFile } from "@/lib/fileFormatParsers";
 import { ColumnMappingDialog } from "@/components/column-mapping-dialog";
 import type { MappedData } from "@/components/column-mapping-dialog";
+import { ICM_RUBY_SCRIPTS, ICM_WORKFLOW_GUIDE } from "@/lib/icmRubyScripts";
+import type { ICMScript } from "@/lib/icmRubyScripts";
 import {
   AreaChart,
   Area,
@@ -27,6 +30,60 @@ interface DataImportTabProps {
   onNext?: () => void;
 }
 
+function ScriptBlock({ script }: { script: ICMScript }) {
+  const [open, setOpen] = useState(false);
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = useCallback(() => {
+    navigator.clipboard.writeText(script.code).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
+  }, [script.code]);
+
+  return (
+    <Collapsible open={open} onOpenChange={setOpen}>
+      <div className="border rounded-md">
+        <CollapsibleTrigger asChild>
+          <button
+            className="flex items-center justify-between w-full px-4 py-3 text-left hover:bg-muted/50 transition-colors"
+            data-testid={`button-toggle-${script.id}`}
+          >
+            <div className="flex items-center gap-3 min-w-0">
+              <Terminal className="h-4 w-4 shrink-0 text-muted-foreground" />
+              <div className="min-w-0">
+                <p className="text-sm font-medium truncate">{script.title}</p>
+                <p className="text-xs text-muted-foreground line-clamp-1">{script.description}</p>
+              </div>
+            </div>
+            {open ? <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground" /> : <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" />}
+          </button>
+        </CollapsibleTrigger>
+        <CollapsibleContent>
+          <div className="border-t px-4 py-3 space-y-2">
+            <div className="flex items-center justify-between">
+              <Badge variant="outline" className="text-xs font-mono">Ruby</Badge>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleCopy}
+                className="h-7 text-xs gap-1.5"
+                data-testid={`button-copy-${script.id}`}
+              >
+                {copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
+                {copied ? "Copied" : "Copy Script"}
+              </Button>
+            </div>
+            <pre className="bg-muted/50 rounded-md p-3 text-xs font-mono overflow-x-auto max-h-[400px] overflow-y-auto whitespace-pre leading-relaxed">
+              {script.code}
+            </pre>
+          </div>
+        </CollapsibleContent>
+      </div>
+    </Collapsible>
+  );
+}
+
 export function DataImportTab({ onNext }: DataImportTabProps) {
   const { flowData, setFlowData, rainfallData, setRainfallData, loadSampleData, sampleDataLoaded } = useCalibrationData();
   const [dragOver, setDragOver] = useState(false);
@@ -35,6 +92,7 @@ export function DataImportTab({ onNext }: DataImportTabProps) {
   const [fileError, setFileError] = useState<string | null>(null);
   const [importSuccess, setImportSuccess] = useState<string | null>(null);
   const [columnMappingOpen, setColumnMappingOpen] = useState(false);
+  const [icmSectionOpen, setIcmSectionOpen] = useState(false);
 
   const handleMappedImport = useCallback((data: MappedData[], fileName: string) => {
     const timestamps = data.map(d => d.timestamp);
@@ -303,6 +361,42 @@ export function DataImportTab({ onNext }: DataImportTabProps) {
           </CardContent>
         </Card>
       )}
+
+      <Collapsible open={icmSectionOpen} onOpenChange={setIcmSectionOpen}>
+        <Card>
+          <CollapsibleTrigger asChild>
+            <CardHeader className="cursor-pointer hover:bg-muted/30 transition-colors pb-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle className="text-sm flex items-center gap-2">
+                    <Terminal className="h-4 w-4" />
+                    Import from ICM — Ruby Exchange Scripts
+                  </CardTitle>
+                  <CardDescription className="text-xs mt-1">
+                    6 Ruby scripts for extracting and importing RTK data between ICM InfoWorks/SWMM and SSOAP Toolbox
+                  </CardDescription>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Badge variant="secondary" className="text-xs">{ICM_RUBY_SCRIPTS.length} Scripts</Badge>
+                  {icmSectionOpen ? <ChevronDown className="h-4 w-4 text-muted-foreground" /> : <ChevronRight className="h-4 w-4 text-muted-foreground" />}
+                </div>
+              </div>
+            </CardHeader>
+          </CollapsibleTrigger>
+          <CollapsibleContent>
+            <CardContent className="space-y-4 pt-0">
+              <div className="bg-muted/30 rounded-md p-3 text-xs text-muted-foreground font-mono whitespace-pre-wrap" data-testid="text-icm-workflow-guide">
+                {ICM_WORKFLOW_GUIDE}
+              </div>
+              <div className="space-y-2">
+                {ICM_RUBY_SCRIPTS.map((script) => (
+                  <ScriptBlock key={script.id} script={script} />
+                ))}
+              </div>
+            </CardContent>
+          </CollapsibleContent>
+        </Card>
+      </Collapsible>
 
       {(flowData || rainfallData) && onNext && (
         <div className="flex justify-end">

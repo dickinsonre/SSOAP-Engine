@@ -120,14 +120,14 @@ function parseINPCoordinates(content: string): SWMMNetwork {
     }
   }
 
-  for (const [id, coord] of coordMap) {
+  coordMap.forEach((coord, id) => {
     nodes.push({
       id,
       x: coord.x,
       y: coord.y,
       type: nodeTypes.get(id) || "junction",
     });
-  }
+  });
 
   for (const link of links) {
     link.vertices = vertexMap.get(link.id) || [];

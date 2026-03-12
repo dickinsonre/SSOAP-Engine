@@ -1,5 +1,5 @@
 import { useState, useCallback } from "react";
-import { SlidersHorizontal, ArrowRight, Play, Loader2, Trophy, Swords } from "lucide-react";
+import { SlidersHorizontal, ArrowRight, Play, Loader2, Trophy, Swords, Gauge, BarChart3 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -20,6 +20,9 @@ import type { OptimizationResult } from "@/contexts/CalibrationDataContext";
 import { AutoConstraintDetector } from "./AutoConstraintDetector";
 import { CalibrationWizard } from "./CalibrationWizard";
 import {
+  calculateGoodnessOfFit, runSensitivityOAT, getPerformanceRating,
+} from "@/lib/flowDecomposition";
+import {
   ComposedChart,
   Area,
   Line,
@@ -30,6 +33,9 @@ import {
   Legend,
   LineChart,
   Brush,
+  BarChart,
+  Bar,
+  Cell,
 } from "recharts";
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
 import { apiRequest } from "@/lib/queryClient";
@@ -177,10 +183,11 @@ interface TournamentState {
 }
 
 export function CalibrateTab({ onNext }: CalibrateTabProps) {
-  const { rainfallData, rdiiSeries, optimizationResults, setOptimizationResults } = useCalibrationData();
+  const { rainfallData, rdiiSeries, optimizationResults, setOptimizationResults, sensitivityResults, setSensitivityResults } = useCalibrationData();
   const [running, setRunning] = useState(false);
   const [progress, setProgress] = useState(0);
   const [progressHistory, setProgressHistory] = useState<{ gen: number; best: number }[]>([]);
+  const [gofMetrics, setGofMetrics] = useState<ReturnType<typeof calculateGoodnessOfFit> | null>(null);
 
   const [tournamentRunning, setTournamentRunning] = useState(false);
   const [tournamentProgress, setTournamentProgress] = useState("");
@@ -295,8 +302,21 @@ export function CalibrateTab({ onNext }: CalibrateTabProps) {
       setProgress(100);
       setProgressHistory(history);
       setRunning(false);
+
+      const bestResult = results[0];
+      if (bestResult?.simulatedFlow) {
+        const gof = calculateGoodnessOfFit(rdiiSeries.values, bestResult.simulatedFlow);
+        setGofMetrics(gof);
+      }
     }, 100);
   }, [rainfallData, rdiiSeries, bounds, optimizationResults, setOptimizationResults]);
+
+  const handleSensitivity = useCallback(() => {
+    if (!rainfallData || !rdiiSeries || optimizationResults.length === 0) return;
+    const best = optimizationResults[optimizationResults.length - 1];
+    const results = runSensitivityOAT(best.parameters, rainfallData.values, rdiiSeries.values, 1, 0.2);
+    setSensitivityResults(results);
+  }, [rainfallData, rdiiSeries, optimizationResults, setSensitivityResults]);
 
   const handleTournament = useCallback(async () => {
     if (!rainfallData || !rdiiSeries) return;
@@ -670,6 +690,87 @@ export function CalibrateTab({ onNext }: CalibrateTabProps) {
             </Card>
           )}
         </>
+      )}
+
+      {gofMetrics && (
+        <Card>
+          <CardHeader className="pb-3">
+            <div className="flex items-center gap-1.5">
+              <Gauge className="h-5 w-5" />
+              <CardTitle className="text-sm">Goodness-of-Fit Dashboard</CardTitle>
+              <HelpTooltip text="Comprehensive model performance assessment using multiple metrics. Ratings follow Moriasi et al. (2007) guidelines for hydrological model evaluation." />
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="grid gap-3 md:grid-cols-3 lg:grid-cols-5">
+              {[
+                { name: "NSE", value: gofMetrics.nse, format: (v: number) => (v * 100).toFixed(1) + "%" },
+                { name: "KGE", value: gofMetrics.kge, format: (v: number) => v.toFixed(3) },
+                { name: "R²", value: gofMetrics.r2, format: (v: number) => v.toFixed(4) },
+                { name: "PBIAS", value: gofMetrics.pbias, format: (v: number) => v.toFixed(1) + "%" },
+                { name: "d-Index", value: gofMetrics.dIndex, format: (v: number) => v.toFixed(3) },
+                { name: "RMSE", value: gofMetrics.rmse, format: (v: number) => v.toFixed(4) },
+                { name: "MAE", value: gofMetrics.mae, format: (v: number) => v.toFixed(4) },
+                { name: "Peak Error", value: gofMetrics.peakError, format: (v: number) => v.toFixed(1) + "%" },
+                { name: "Vol Error", value: gofMetrics.volumeError, format: (v: number) => v.toFixed(1) + "%" },
+              ].map((m) => {
+                const rating = getPerformanceRating(m.name, m.value);
+                return (
+                  <div key={m.name} className="text-center p-2 rounded-lg border">
+                    <p className="text-lg font-bold font-mono" data-testid={`text-gof-${m.name.toLowerCase().replace(/[²\s-]/g, '')}`}>{m.format(m.value)}</p>
+                    <p className="text-xs text-muted-foreground">{m.name}</p>
+                    <Badge
+                      variant={rating.color === 'green' ? 'default' : rating.color === 'yellow' ? 'secondary' : 'destructive'}
+                      className="mt-1 text-xs"
+                      data-testid={`badge-gof-${m.name.toLowerCase().replace(/[²\s-]/g, '')}`}
+                    >
+                      {rating.rating}
+                    </Badge>
+                  </div>
+                );
+              })}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {latestResult && (
+        <Card>
+          <CardHeader className="pb-3">
+            <div className="flex items-center gap-1.5">
+              <BarChart3 className="h-5 w-5" />
+              <CardTitle className="text-sm">Parameter Sensitivity Analysis</CardTitle>
+              <HelpTooltip text="One-At-a-Time (OAT) sensitivity analysis perturbs each parameter ±20% around the optimum and measures the change in NSE. Taller bars = more sensitive parameters." />
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <Button onClick={handleSensitivity} variant="outline" size="sm" data-testid="button-run-sensitivity">
+              <BarChart3 className="mr-2 h-4 w-4" />
+              Run Sensitivity Analysis
+            </Button>
+
+            {sensitivityResults.length > 0 && (
+              <ChartContainer config={{ sensitivity: { label: "Sensitivity", color: "hsl(var(--primary))" } }} className="h-[200px] w-full">
+                <ResponsiveContainer>
+                  <BarChart data={sensitivityResults.map(s => ({
+                    param: s.parameter,
+                    sensitivity: s.sensitivity,
+                  }))}>
+                    <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                    <XAxis dataKey="param" tick={{ fontSize: 10 }} />
+                    <YAxis tick={{ fontSize: 9 }} label={{ value: "NSE Range", angle: -90, position: "insideLeft", fontSize: 10 }} />
+                    <ChartTooltip content={<ChartTooltipContent />} />
+                    <Bar dataKey="sensitivity" name="Sensitivity" fill="hsl(var(--primary))">
+                      {sensitivityResults.map((s, i) => (
+                        <Cell key={i} fill={s.sensitivity > 0.1 ? "hsl(var(--chart-1))" : s.sensitivity > 0.05 ? "hsl(var(--chart-2))" : "hsl(var(--chart-4))"} />
+                      ))}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              </ChartContainer>
+            )}
+          </CardContent>
+        </Card>
       )}
 
       <Separator />
