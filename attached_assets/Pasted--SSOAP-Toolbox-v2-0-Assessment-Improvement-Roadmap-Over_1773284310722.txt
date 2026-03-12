@@ -1,0 +1,410 @@
+# SSOAP Toolbox v2.0 — Assessment & Improvement Roadmap
+
+## Overall Grade: **A- (90/100)**
+
+This is a genuinely impressive modernization of EPA's legacy SSOAP toolbox — particularly timely given that EPA officially discontinued SSOAP maintenance on March 18, 2025 and stated "the functionality in SSOAP will be integrated into the new graphical user interface being developed for SWMM." You've essentially built that next-generation tool independently.
+
+---
+
+## Detailed Scoring
+
+| Category | Score | Notes |
+|---|---|---|
+| **Domain Relevance & Timing** | 98/100 | Filling an EPA gap at exactly the right moment |
+| **Architecture** | 94/100 | SWMM5 in WebAssembly is a significant technical achievement |
+| **UI/UX Design** | 92/100 | Clean, modern dashboard; professional card-based layout |
+| **Feature Breadth** | 88/100 | Core SSOAP features present; some gaps in advanced analysis |
+| **Navigation & Information Architecture** | 90/100 | Logical sidebar grouping; clear hierarchy |
+| **Data Visualization** | 82/100 | Hydrograph page exists but depth of chart interactivity unclear |
+| **Documentation & Onboarding** | 75/100 | Dashboard is self-explanatory but no in-app help or tutorials |
+| **Workflow Completeness** | 85/100 | Upload → Analyze → Report chain partially visible |
+| **Performance** | 92/100 | WASM engine avoids server round-trips; client-side simulation |
+| **Production Readiness** | 80/100 | Demo data present; unclear how it handles edge cases at scale |
+
+---
+
+## What's Excellent
+
+### 1. SWMM5 WebAssembly Engine — The Killer Feature
+
+Running SWMM5 simulations entirely in the browser via WebAssembly is a genuinely rare capability. This means:
+- **No server-side compute costs** for simulation
+- **No installation required** — engineers can run models from any browser
+- **Privacy** — model files never leave the user's machine
+- **Offline potential** — with a service worker, this could work without internet
+
+This alone differentiates the tool from every other web-based SWMM tool I've seen in the search results.
+
+### 2. Dashboard Design
+
+The dashboard follows modern analytics tool patterns effectively:
+
+| Element | Assessment |
+|---|---|
+| KPI cards (Active Projects, Running Sims, SSO Events, Avg RDII) | Excellent — gives instant system health at a glance |
+| Quick-action cards (Run Simulation, RDII Analysis, DWF Analysis, View Hydrographs) | Good — reduces clicks to core workflows |
+| Recent Projects list with metadata (sewersheds, acres) | Professional — shows domain awareness |
+| SSO Events with severity badges (minor/moderate/major) and volumes | Excellent — real operational data at a glance |
+| Simulation status (running/completed with timing) | Practical — engineers need this immediately |
+
+### 3. Navigation Structure
+
+The sidebar organization reflects genuine understanding of the SSOAP workflow:
+
+```
+Navigation (General)          ← Where am I?
+├── Dashboard
+├── Projects
+
+Analysis Tools (Core Work)    ← What do I need to do?
+├── SWMM5 Simulation [WASM]
+├── RDII Analysis
+├── DWF Analysis
+├── Hydrograph
+├── Condition Assessment
+├── RDII Studio [NEW]
+
+Monitoring (Operational)      ← What happened?
+├── SSO Events
+
+Resources (Reference)         ← Help me
+├── Documents
+├── Settings
+```
+
+This is a well-structured information architecture that follows the engineer's mental model.
+
+### 4. ICM Integration
+
+The "Import from ICM" and "Import SWMM Model" buttons on the dashboard indicate interoperability with Autodesk InfoWorks ICM, which is the dominant commercial platform. This is a strong differentiator — engineers working in ICM can export to this tool for specialized SSOAP analysis.
+
+---
+
+## What Needs Improvement
+
+### 🔴 Priority 1 — Critical Gaps
+
+#### 1A. The Simulation Page Is Empty Without a Project
+
+From the search results, the simulation page shows:
+
+> *"Select a project to view and run simulations"*
+
+**Problem:** A new user who navigates directly to Simulation (the most compelling feature) sees an empty state with no guidance. There's no way to try the WASM engine without first creating a project.
+
+**Fix:** Add a "Try with Sample Model" button that loads one of the EPA example networks (Example1.inp through Example6.inp) directly into the simulator. Let the user experience the WASM simulation in under 10 seconds.
+
+```
+┌──────────────────────────────────────────────────────┐
+│  SWMM5 Simulation                    SWMM 5.1 WASM  │
+│                                                       │
+│  ┌────────────────────────────────────────────────┐  │
+│  │                                                │  │
+│  │    No project selected                         │  │
+│  │                                                │  │
+│  │    [📁 Import SWMM Model]                      │  │
+│  │    [🔬 Try Example Network]     ← ADD THIS     │  │
+│  │    [📥 Import from ICM]                        │  │
+│  │                                                │  │
+│  └────────────────────────────────────────────────┘  │
+│                                                       │
+│  Example Models:                        ← ADD THIS   │
+│  ┌──────────┐ ┌──────────┐ ┌──────────┐             │
+│  │Example 1 │ │Example 6 │ │User1.inp │             │
+│  │5 nodes   │ │Rain+RDII │ │Uploaded  │             │
+│  │6 links   │ │22 nodes  │ │145 nodes │             │
+│  └──────────┘ └──────────┘ └──────────┘             │
+└──────────────────────────────────────────────────────┘
+```
+
+**Effort:** 1 day
+**Impact:** Massive — converts curious visitors into engaged users
+
+#### 1B. No Visible Results or Output Anywhere
+
+The dashboard shows "Baseline Simulation — completed — Completed in 45s" but there's no indication of what you can *do* with those results. Where are the output hydrographs? Node flooding summaries? Continuity errors? Link capacity utilization?
+
+**Fix:** Add a results panel that appears after simulation:
+
+```
+Simulation Results — Baseline Simulation
+├── 📊 Run Summary
+│   ├── Continuity Error: 0.12%
+│   ├── Time Steps: 8,640
+│   └── Duration: 24:00:00
+├── 📈 Time Series Results
+│   ├── Node Depths (select nodes...)
+│   ├── Link Flows (select links...)
+│   └── System Runoff
+├── ⚠️ Flooding Summary
+│   ├── J5: 2,450 gal (1.2 hrs)
+│   └── J12: 890 gal (0.4 hrs)
+├── 🔴 Capacity Analysis
+│   ├── C3: 94% full (critical)
+│   ├── C7: 87% full (warning)
+│   └── 42 links < 50% (ok)
+└── 📥 Export
+    ├── Download .rpt
+    ├── Download .out
+    └── Export to CSV
+```
+
+**Effort:** 3-5 days
+**Impact:** This is the entire reason engineers run simulations
+
+#### 1C. RDII Studio — What Does It Do?
+
+This is marked as "NEW" but the search results give no detail on what it provides beyond the existing RDII Analysis page. The name "Studio" implies something interactive and creative, but there's no description.
+
+**Fix:** Add a subtitle or description:
+
+```
+RDII Studio                                        NEW
+Interactive RTK parameter calibration with visual
+hydrograph fitting and automated optimization
+```
+
+If it doesn't yet have that functionality, here's what "RDII Studio" should be:
+
+| Feature | Description |
+|---|---|
+| **Visual RTK Calibration** | Overlay observed flow data with SWMM-generated RDII hydrograph; adjust R, T, K sliders and see the fit update in real time |
+| **Multi-Event Fitting** | Calibrate against multiple storm events simultaneously |
+| **Goodness-of-Fit Metrics** | Nash-Sutcliffe, RMSE, peak flow error, volume error — all updating live |
+| **Parameter Bounds** | Set min/max for each RTK parameter to constrain calibration |
+| **Auto-Optimize** | Run a simple optimization (grid search or Nelder-Mead) to find best-fit parameters |
+| **Export RTK Parameters** | Generate the [RDII] and [HYDROGRAPHS] INP sections |
+
+**Effort:** 2-3 weeks for full implementation
+**Impact:** This would be the single most valuable feature for sanitary sewer engineers — RDII calibration is the most time-consuming part of SSO analysis
+
+---
+
+### 🟡 Priority 2 — Feature Enhancements
+
+#### 2A. SSO Events Need Analytics, Not Just a List
+
+Currently SSO Events shows a severity-tagged list with volume and duration. This is a good start but needs:
+
+| Enhancement | Value |
+|---|---|
+| **SSO Event Timeline** | Gantt-style chart showing when each SSO occurred relative to rainfall |
+| **Volume vs Duration Scatter** | Identify which manholes have disproportionate overflow rates |
+| **Recurrence Analysis** | Which locations overflow repeatedly? Show frequency ranking |
+| **Rainfall Correlation** | Overlay SSO events on rainfall intensity curves |
+| **Regulatory Reporting** | Generate CMOM/EPA SSO notification reports |
+| **Map View** | Plot SSO locations on the network map with size-coded markers |
+
+```
+SSO Events — Analytics Dashboard
+┌─────────────────────────────────────────┐
+│  📊 SSO Frequency by Location           │
+│  ████████████  MH-102 (4 events)        │
+│  ████████      PS-3   (3 events)        │
+│  ████          MH-215 (2 events)        │
+│  ██            MH-089 (1 event)         │
+├─────────────────────────────────────────┤
+│  📈 Volume vs Duration                  │
+│     •                                   │
+│            •  PS-3 (outlier)            │
+│   •   •                                 │
+│  ──────────────────────────────         │
+│  Duration (min) →                       │
+├─────────────────────────────────────────┤
+│  🗺️ SSO Map                             │
+│  [network map with red markers]         │
+└─────────────────────────────────────────┘
+```
+
+**Effort:** 3-4 days
+**Impact:** Transforms SSO tracking from record-keeping to decision-support
+
+#### 2B. Condition Assessment Needs Detail
+
+The sidebar lists "Condition Assessment" but there's no description of what it provides. For a SSOAP tool, condition assessment typically means:
+
+| Component | Expected Functionality |
+|---|---|
+| **CCTV/Pipe Inspection Data** | Import inspection reports, rate pipe condition (NASSCO PACP scoring) |
+| **Defect Mapping** | Plot structural and O&M defects along pipe segments |
+| **Rehabilitation Priority** | Score pipes by condition + hydraulic criticality + SSO risk |
+| **I/I Source Identification** | Correlate condition data with RDII hot spots |
+| **Cost Estimation** | Estimate rehab costs per pipe (CIPP, pipe bursting, open-cut) |
+
+Even a simplified version showing pipe age, material, and a computed condition score would be valuable.
+
+**Effort:** 1-2 weeks
+**Impact:** Connects the hydraulic analysis to the capital improvement planning that justifies the analysis
+
+#### 2C. DWF Analysis Enhancements
+
+Dry Weather Flow analysis is the foundation of RDII quantification. The tool should include:
+
+- **Diurnal Pattern Editor** — visual curve editor for 24-hour DWF patterns
+- **GWI Estimation** — groundwater infiltration baseline estimation
+- **Per-Capita Flow Calculator** — population × gpcd = base flow
+- **DWF Decomposition** — separate base sanitary flow, GWI, and BWWF
+- **Minimum Night Flow** — automated detection for GWI estimation
+
+**Effort:** 1 week
+**Impact:** Critical for accurate RDII quantification
+
+#### 2D. Add a Network Map Visualization
+
+The dashboard mentions acreage and sewersheds but there's no visible network map. Given that you're already parsing SWMM INP files (which contain [COORDINATES] and [VERTICES] sections), you should display:
+
+- **Interactive network map** with nodes, links, and subcatchment polygons
+- **Color coding by results** (depth, flow, velocity, d/D ratio)
+- **Click-to-inspect** — click a node or link to see its properties
+- **SSO overlay** — show overflow locations on the network
+- **Basemap option** — toggle OpenStreetMap or satellite imagery behind the network
+
+Use Leaflet.js or Mapbox GL for the base map, with the SWMM network rendered as an overlay.
+
+**Effort:** 3-5 days
+**Impact:** Spatial context is essential for sewer analysis — engineers think geographically
+
+---
+
+### 🟢 Priority 3 — Polish & Professional Features
+
+#### 3A. Add a Project Wizard
+
+When clicking "New Project," walk the user through:
+
+```
+Step 1: Project Info
+  ├── Project Name
+  ├── Description  
+  ├── Client / Utility Name
+  └── Regulatory Driver (CMOM / Consent Decree / CIP / Other)
+
+Step 2: Import Model
+  ├── Upload SWMM5 .inp file
+  ├── Import from ICM
+  └── Start from scratch (define sewersheds manually)
+
+Step 3: Import Monitoring Data
+  ├── Upload flow monitoring CSV/Excel
+  ├── Upload rainfall data
+  └── Define monitoring period
+
+Step 4: Define Sewersheds
+  ├── Auto-detect from subcatchments
+  ├── Manual delineation
+  └── Import from GIS (Shapefile/GeoJSON)
+
+Step 5: Review & Create
+  ├── Summary of imported data
+  └── [Create Project]
+```
+
+**Effort:** 2-3 days
+**Impact:** Guides new users through the complex setup process
+
+#### 3B. Add Report Generation
+
+After analysis, engineers need to produce reports for regulators and management. Add:
+
+- **SSOAP Summary Report** (PDF/HTML) containing:
+  - Project description and model extent
+  - DWF analysis results with diurnal patterns
+  - RDII quantification results (R-values by sewershed)
+  - Capacity analysis results (d/D ratios, velocity checks)
+  - SSO risk ranking
+  - Recommended rehabilitation priorities
+- **Template system** — let users customize report headers with their utility logo and branding
+
+**Effort:** 1-2 weeks
+**Impact:** The deliverable that engineers actually send to clients and regulators
+
+#### 3C. Add Data Import Flexibility
+
+Monitoring data comes in many formats. Support:
+
+| Format | Use Case |
+|---|---|
+| CSV with flexible column mapping | Most common export from SCADA/loggers |
+| EPA SWMM .dat rainfall files | Standard SWMM rainfall input |
+| USGS instantaneous flow data | Direct download from USGS NWIS |
+| ADS/Hach flow monitor exports | Common field equipment brands |
+| Excel (.xlsx) | Engineers love Excel |
+
+Add a column-mapping dialog:
+
+```
+┌── Import Flow Monitoring Data ──────────────┐
+│                                              │
+│  File: MainSt_FlowMonitor_2025.csv          │
+│                                              │
+│  Column Mapping:                             │
+│  ┌──────────────┬──────────────────────┐     │
+│  │ Your Column  │ Maps To              │     │
+│  ├──────────────┼──────────────────────┤     │
+│  │ DateTime     │ ▼ Timestamp          │     │
+│  │ Flow_MGD     │ ▼ Flow               │     │
+│  │ Depth_ft     │ ▼ Depth              │     │
+│  │ Velocity_fps │ ▼ Velocity           │     │
+│  │ Temp_F       │ ▼ (skip)             │     │
+│  └──────────────┴──────────────────────┘     │
+│                                              │
+│  Units: [US Customary ▼]                     │
+│  Flow: [MGD ▼]  Depth: [ft ▼]               │
+│                                              │
+│  Preview (first 5 rows):                     │
+│  ┌─────────────────────────────────────┐     │
+│  │ 2025-01-15 00:00  0.45  1.2  0.8   │     │
+│  │ 2025-01-15 00:15  0.43  1.1  0.7   │     │
+│  │ ...                                 │     │
+│  └─────────────────────────────────────┘     │
+│                                              │
+│            [Cancel]  [Import]                │
+└──────────────────────────────────────────────┘
+```
+
+**Effort:** 2-3 days
+**Impact:** Eliminates the most common friction point in starting an analysis
+
+#### 3D. Offline / PWA Support
+
+Since the SWMM5 engine runs in WebAssembly (client-side), this tool is a perfect candidate for a Progressive Web App:
+
+- Add a service worker to cache the WASM binary and app shell
+- Enable "Add to Home Screen" on tablets
+- Allow engineers to work in the field without internet
+- Sync results when connectivity returns
+
+**Effort:** 2 days
+**Impact:** Field engineers often work in manholes and pump stations with poor connectivity
+
+---
+
+## Competitive Positioning
+
+| Tool | Status | Your Advantage |
+|---|---|---|
+| **EPA SSOAP** | Discontinued March 2025 | You're the active replacement |
+| **EPA SWMM5 GUI** | Desktop only (Delphi) | Browser-based, no install |
+| **PCSWMM** | Commercial ($$$) | Free, open-source potential |
+| **InfoSWMM** | Tied to ArcGIS | Standalone, lighter weight |
+| **ICM SWMM** | Commercial (Autodesk) | Your ICM import bridges the gap |
+| **OpenSWMM** | Code viewer only | You run actual simulations |
+
+**Strategic recommendation:** Position this as **"The modern, open replacement for EPA SSOAP"** and submit it to EPA's Water Research division as a community tool. The EPA page literally says the SSOAP functionality will be integrated into the new SWMM GUI — you've already built that.
+
+---
+
+## Improvement Roadmap
+
+| Week | Focus | Deliverables |
+|---|---|---|
+| **1** | Quick wins | Sample model on Simulation page, RDII Studio description, empty states |
+| **2** | Results pipeline | Post-simulation results viewer with summary tables and time series charts |
+| **3** | Network map | Leaflet-based interactive map from COORDINATES/VERTICES data |
+| **4** | RDII Studio | Interactive RTK calibration with visual hydrograph overlay |
+| **5** | SSO analytics | Event timeline, frequency analysis, map overlay |
+| **6** | Reporting | PDF/HTML report generation with customizable templates |
+| **7** | Data import | Flexible CSV/Excel import with column mapping |
+| **8** | Polish | PWA support, onboarding wizard, documentation |
+
+After this 8-week roadmap, the tool would grade at **97/100** and would be the most capable free SSOAP tool available anywhere — filling the gap EPA explicitly acknowledged when they discontinued the original.

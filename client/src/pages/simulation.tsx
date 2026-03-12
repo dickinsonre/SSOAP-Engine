@@ -13,6 +13,7 @@ import {
   Trash2,
   RefreshCw,
   FileSpreadsheet,
+  Database,
 } from "lucide-react";
 import { ICMImportDialog } from "@/components/icm-import-dialog";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -49,6 +50,21 @@ function FileUploadZone({
   isUploading: boolean;
 }) {
   const [isDragging, setIsDragging] = useState(false);
+  const [loadingSample, setLoadingSample] = useState(false);
+
+  const handleLoadSample = useCallback(async () => {
+    setLoadingSample(true);
+    try {
+      const response = await fetch("/sample-data/Greenville_SI.inp");
+      const blob = await response.blob();
+      const file = new File([blob], "Greenville_SI.inp", { type: "application/octet-stream" });
+      onFileSelect(file);
+    } catch (err) {
+      console.error("Failed to load sample model:", err);
+    } finally {
+      setLoadingSample(false);
+    }
+  }, [onFileSelect]);
 
   const handleDragOver = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -112,14 +128,29 @@ function FileUploadZone({
           id="file-upload"
           disabled={isUploading}
         />
-        <label htmlFor="file-upload">
-          <Button asChild disabled={isUploading} data-testid="button-upload-file">
-            <span>
-              <FileText className="mr-2 h-4 w-4" />
-              {isUploading ? "Uploading..." : "Select File"}
-            </span>
+        <div className="flex items-center gap-3">
+          <label htmlFor="file-upload">
+            <Button asChild disabled={isUploading} data-testid="button-upload-file">
+              <span>
+                <FileText className="mr-2 h-4 w-4" />
+                {isUploading ? "Uploading..." : "Select File"}
+              </span>
+            </Button>
+          </label>
+          <span className="text-xs text-muted-foreground">or</span>
+          <Button
+            variant="outline"
+            onClick={handleLoadSample}
+            disabled={isUploading || loadingSample}
+            data-testid="button-load-sample-model"
+          >
+            <Database className="mr-2 h-4 w-4" />
+            {loadingSample ? "Loading..." : "Load Sample Model"}
           </Button>
-        </label>
+        </div>
+        <p className="text-xs text-muted-foreground mt-2">
+          Sample: Greenville SWMM5 model (SI units, 14K lines, all features)
+        </p>
       </CardContent>
     </Card>
   );
