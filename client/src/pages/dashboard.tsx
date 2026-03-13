@@ -546,9 +546,9 @@ export default function Dashboard() {
     return (
       <div className="p-6 space-y-6">
         <div>
-          <h1 className="text-2xl font-semibold">Dashboard</h1>
+          <h1 className="text-2xl font-semibold">SSOAP Dashboard</h1>
           <p className="text-sm text-muted-foreground">
-            Overview of your sewer analysis projects and simulations
+            SSOAP Toolbox — Overview of your sewer analysis projects and simulations
           </p>
         </div>
         <LoadingSkeleton />
@@ -561,9 +561,9 @@ export default function Dashboard() {
   return (
     <div className="p-6 space-y-6">
       <div>
-        <h1 className="text-2xl font-semibold" data-testid="text-dashboard-title">Dashboard</h1>
+        <h1 className="text-2xl font-semibold" data-testid="text-dashboard-title">SSOAP Dashboard</h1>
         <p className="text-sm text-muted-foreground">
-          Overview of your sewer analysis projects and simulations
+          SSOAP Toolbox — Overview of your sewer analysis projects and simulations
         </p>
       </div>
 
