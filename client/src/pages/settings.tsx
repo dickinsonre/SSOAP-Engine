@@ -14,6 +14,7 @@ import {
   Shield,
   GraduationCap,
   TreePine,
+  Download,
 } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -218,6 +219,16 @@ export default function SettingsPage() {
                 >
                   <Github className="mr-2 h-3 w-3" />
                   EPA GitHub
+                </a>
+              </Button>
+              <Button variant="outline" size="sm" asChild>
+                <a
+                  href="/HANDOVER.md"
+                  download="SSOAP_2026_HANDOVER.md"
+                  data-testid="link-download-handover"
+                >
+                  <Download className="mr-2 h-3 w-3" />
+                  Download Handover Doc
                 </a>
               </Button>
             </div>
