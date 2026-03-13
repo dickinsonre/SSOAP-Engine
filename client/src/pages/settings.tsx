@@ -149,7 +149,7 @@ export default function SettingsPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-lg">About SSOAP Toolbox</CardTitle>
+          <CardTitle className="text-lg">About SSOAP 2026</CardTitle>
           <CardDescription>
             Sanitary Sewer Overflow Analysis and Planning
           </CardDescription>
@@ -227,7 +227,7 @@ export default function SettingsPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-lg">SSOAP Toolbox Components</CardTitle>
+          <CardTitle className="text-lg">SSOAP 2026 Components</CardTitle>
           <CardDescription>Available analysis tools in this application</CardDescription>
         </CardHeader>
         <CardContent>
@@ -304,7 +304,7 @@ export default function SettingsPage() {
 
       <div className="text-center text-xs text-muted-foreground pt-4">
         <p>
-          Based on EPA SSOAP Toolbox. Original software developed by EPA Office of Research and Development.
+          Based on EPA SSOAP Toolbox. SSOAP 2026 — a modern web-based reimplementation.
         </p>
         <p className="mt-1">
           Web version powered by SWMM-JS WebAssembly engine.

@@ -373,7 +373,7 @@ export function DataImportTab({ onNext }: DataImportTabProps) {
                     Import from ICM — Ruby Exchange Scripts
                   </CardTitle>
                   <CardDescription className="text-xs mt-1">
-                    6 Ruby scripts for extracting and importing RTK data between ICM InfoWorks/SWMM and SSOAP Toolbox
+                    6 Ruby scripts for extracting and importing RTK data between ICM InfoWorks/SWMM and SSOAP 2026
                   </CardDescription>
                 </div>
                 <div className="flex items-center gap-2">

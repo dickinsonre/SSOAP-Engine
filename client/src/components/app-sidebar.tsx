@@ -111,7 +111,7 @@ export function AppSidebar() {
             <Droplets className="h-5 w-5" />
           </div>
           <div className="flex flex-col group-data-[collapsible=icon]:hidden">
-            <span className="text-base font-semibold tracking-tight">SSOAP</span>
+            <span className="text-base font-semibold tracking-tight">SSOAP 2026</span>
             <span className="text-xs text-muted-foreground">Toolbox v2.0</span>
           </div>
         </Link>
