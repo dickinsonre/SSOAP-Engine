@@ -499,7 +499,7 @@ function EmptyState({ onImportClick }: { onImportClick: () => void }) {
         <div className="flex h-20 w-20 items-center justify-center rounded-full bg-primary/10 mb-6">
           <Droplets className="h-10 w-10 text-primary" />
         </div>
-        <h3 className="text-xl font-semibold mb-2">Get Started with SSOAP</h3>
+        <h3 className="text-xl font-semibold mb-2">Get Started with SSOAP 2026</h3>
         <p className="text-sm text-muted-foreground text-center max-w-md mb-8">
           Import your first SWMM model or create a new project to begin analyzing your sewer system.
         </p>
@@ -546,9 +546,9 @@ export default function Dashboard() {
     return (
       <div className="p-6 space-y-6">
         <div>
-          <h1 className="text-2xl font-semibold">SSOAP Dashboard</h1>
+          <h1 className="text-2xl font-semibold">SSOAP 2026 Dashboard</h1>
           <p className="text-sm text-muted-foreground">
-            SSOAP Toolbox — Overview of your sewer analysis projects and simulations
+            SSOAP 2026 — Overview of your sewer analysis projects and simulations
           </p>
         </div>
         <LoadingSkeleton />
@@ -561,9 +561,9 @@ export default function Dashboard() {
   return (
     <div className="p-6 space-y-6">
       <div>
-        <h1 className="text-2xl font-semibold" data-testid="text-dashboard-title">SSOAP Dashboard</h1>
+        <h1 className="text-2xl font-semibold" data-testid="text-dashboard-title">SSOAP 2026 Dashboard</h1>
         <p className="text-sm text-muted-foreground">
-          SSOAP Toolbox — Overview of your sewer analysis projects and simulations
+          SSOAP 2026 — Overview of your sewer analysis projects and simulations
         </p>
       </div>
 
