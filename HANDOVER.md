@@ -1,8 +1,8 @@
 # SSOAP Toolbox - Complete Project Handover Document
 
-**Date:** March 8, 2026
+**Date:** March 13, 2026
 **Project:** SSOAP (Sanitary Sewer Overflow Analysis and Planning) Toolbox
-**Status:** Production-deployed, fully functional
+**Status:** Production-deployed, fully functional, v2.1 with 41-tool flow decomposition pipeline
 
 ---
 
@@ -18,6 +18,7 @@
 8. [CalibrationDataContext: State Management](#8-calibrationdatacontext-state-management)
 9. [File Format Parsers](#9-file-format-parsers)
 10. [Algorithms & Scientific Methods](#10-algorithms--scientific-methods)
+10a. [Flow Decomposition Engine](#10a-flow-decomposition-engine)
 11. [Genetic Algorithm Calibration (Server-Side)](#11-genetic-algorithm-calibration-server-side)
 12. [NSGA-II Multi-Objective Optimization (Client-Side)](#12-nsga-ii-multi-objective-optimization-client-side)
 13. [DWF/GWI Separation Algorithm](#13-dwfgwi-separation-algorithm)
@@ -50,9 +51,9 @@ SSOAP Toolbox is a professional-grade web application for sanitary sewer overflo
 The application is built with a React/TypeScript frontend, Express/Node.js backend, PostgreSQL database, and follows Carbon Design System principles with IBM Plex typography.
 
 **Codebase Statistics:**
-- Total TypeScript/TSX files: 88
-- Total lines of code: ~17,067
-- Largest files: `server/storage.ts` (859 lines), `server/routes.ts` (711 lines), `dashboard.tsx` (724 lines)
+- Total TypeScript/TSX files: 96
+- Total lines of code: ~24,007
+- Largest files: `flowDecomposition.ts` (1,166 lines), `icmRubyScripts.ts` (989 lines), `CalibrateTab.tsx` (951 lines), `server/storage.ts` (859 lines)
 
 ---
 
