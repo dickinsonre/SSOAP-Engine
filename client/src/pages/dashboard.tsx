@@ -226,7 +226,7 @@ function ImportSWMMDialog({
       queryClient.invalidateQueries({ queryKey: ["/api/simulations/recent"] });
       queryClient.invalidateQueries({ queryKey: [`/api/simulations?projectId=${projectId}`] });
       toast({
-        title: "SWMM model imported",
+        title: "SWMM5 model imported",
         description: `${file.name} has been uploaded successfully.`,
       });
       onOpenChange(false);
@@ -246,7 +246,7 @@ function ImportSWMMDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle>Import SWMM Model</DialogTitle>
+          <DialogTitle>Import SWMM5 Model</DialogTitle>
           <DialogDescription>
             Upload your SWMM5 input file (.inp) or report file (.rpt) to begin analysis
           </DialogDescription>
@@ -473,7 +473,7 @@ function WelcomeHero({ onImportClick, onICMImportClick }: { onImportClick: () =>
           <div className="flex flex-wrap gap-3">
             <Button onClick={onImportClick} size="lg" data-testid="button-import-swmm">
               <Upload className="mr-2 h-4 w-4" />
-              Import SWMM Model
+              Import SWMM5 Model
             </Button>
             <Button onClick={onICMImportClick} variant="outline" size="lg" className="bg-emerald-500/10 border-emerald-500/30 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-500/20" data-testid="button-import-icm">
               <FileSpreadsheet className="mr-2 h-4 w-4" />
@@ -501,12 +501,12 @@ function EmptyState({ onImportClick }: { onImportClick: () => void }) {
         </div>
         <h3 className="text-xl font-semibold mb-2">Get Started with SSOAP 2026</h3>
         <p className="text-sm text-muted-foreground text-center max-w-md mb-8">
-          Import your first SWMM model or create a new project to begin analyzing your sewer system.
+          Import your first SWMM5 model or create a new project to begin analyzing your sewer system.
         </p>
         <div className="flex flex-wrap gap-3 justify-center">
           <Button onClick={onImportClick} size="lg" data-testid="button-import-first">
             <Upload className="mr-2 h-4 w-4" />
-            Import SWMM Model
+            Import SWMM5 Model
           </Button>
           <Link href="/projects">
             <Button variant="outline" size="lg" data-testid="button-create-project">
