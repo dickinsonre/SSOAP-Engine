@@ -1,4 +1,5 @@
-import { GitCompare, ArrowRight } from "lucide-react";
+import { useState } from "react";
+import { GitCompare, ArrowRight, Plus, Trash2, MapPin } from "lucide-react";
 import { ModelValidationDashboard } from "./ModelValidationDashboard";
 import { ParameterCorrelationMatrix } from "./ParameterCorrelationMatrix";
 import { CalibrationProjectManager } from "./CalibrationProjectManager";
@@ -6,6 +7,8 @@ import { HydrographVisualization } from "./HydrographVisualization";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   Table,
   TableBody,
@@ -40,6 +43,157 @@ const CHART_COLORS = [
   "hsl(var(--chart-4))",
   "hsl(var(--chart-5))",
 ];
+
+interface SewershedEntry {
+  id: string;
+  name: string;
+  area: number;
+  R1: number; T1: number; K1: number;
+  R2: number; T2: number; K2: number;
+  R3: number; T3: number; K3: number;
+  nse: number;
+}
+
+function classifyResponse(entry: SewershedEntry): string {
+  const total = entry.R1 + entry.R2 + entry.R3;
+  if (total === 0) return "N/A";
+  const fastFrac = entry.R1 / total;
+  const slowFrac = entry.R3 / total;
+  if (fastFrac > 0.5) return "Inflow-Dominant";
+  if (slowFrac > 0.5) return "Infiltration-Dominant";
+  return "Balanced";
+}
+
+function MultiSewershedComparison() {
+  const [sewersheds, setSewersheds] = useState<SewershedEntry[]>(() => {
+    try {
+      const saved = localStorage.getItem("multi-sewershed-data");
+      return saved ? JSON.parse(saved) : [];
+    } catch { return []; }
+  });
+  const [newName, setNewName] = useState("");
+  const [newArea, setNewArea] = useState(50);
+  const { optimizationResults, selectedSolutionIndex } = useCalibrationData();
+
+  function addCurrentSewershed() {
+    if (!newName.trim() || optimizationResults.length === 0) return;
+    const sel = optimizationResults[selectedSolutionIndex] || optimizationResults[0];
+    const entry: SewershedEntry = {
+      id: `sw-${Date.now()}`,
+      name: newName.trim(),
+      area: newArea,
+      ...sel.parameters,
+      nse: sel.nse,
+    };
+    const updated = [...sewersheds, entry];
+    setSewersheds(updated);
+    localStorage.setItem("multi-sewershed-data", JSON.stringify(updated));
+    setNewName("");
+  }
+
+  function removeEntry(id: string) {
+    if (!confirm("Remove this sewershed from the comparison?")) return;
+    const updated = sewersheds.filter(s => s.id !== id);
+    setSewersheds(updated);
+    localStorage.setItem("multi-sewershed-data", JSON.stringify(updated));
+  }
+
+  return (
+    <Card>
+      <CardHeader className="pb-3">
+        <CardTitle className="text-sm flex items-center gap-2">
+          <MapPin className="h-4 w-4" />
+          Multi-Sewershed Comparison
+        </CardTitle>
+        <CardDescription className="text-xs">
+          Save calibrated RTK from different sewersheds and compare side-by-side
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        {optimizationResults.length > 0 && (
+          <div className="flex gap-2 items-end">
+            <div className="flex-1 space-y-1">
+              <Label className="text-xs">Sewershed Name</Label>
+              <Input
+                value={newName}
+                onChange={e => setNewName(e.target.value)}
+                placeholder="e.g., Downtown Core"
+                className="h-8 text-xs"
+                data-testid="input-sewershed-name"
+              />
+            </div>
+            <div className="w-24 space-y-1">
+              <Label className="text-xs">Area (ac)</Label>
+              <Input
+                type="number"
+                value={newArea}
+                onChange={e => setNewArea(Number(e.target.value))}
+                className="h-8 text-xs"
+                data-testid="input-sewershed-area"
+              />
+            </div>
+            <Button size="sm" className="h-8" onClick={addCurrentSewershed} data-testid="button-add-sewershed">
+              <Plus className="h-3 w-3 mr-1" /> Add
+            </Button>
+          </div>
+        )}
+
+        {sewersheds.length > 0 ? (
+          <ScrollArea className="h-[250px]">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="text-xs">Sewershed</TableHead>
+                  <TableHead className="text-xs text-right">Area</TableHead>
+                  <TableHead className="text-xs text-right">R-total</TableHead>
+                  <TableHead className="text-xs text-right">R1</TableHead>
+                  <TableHead className="text-xs text-right">R2</TableHead>
+                  <TableHead className="text-xs text-right">R3</TableHead>
+                  <TableHead className="text-xs text-right">NSE</TableHead>
+                  <TableHead className="text-xs">Type</TableHead>
+                  <TableHead className="text-xs w-8"></TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {sewersheds.map(s => {
+                  const responseType = classifyResponse(s);
+                  const total = s.R1 + s.R2 + s.R3;
+                  return (
+                    <TableRow key={s.id} data-testid={`row-sewershed-${s.id}`}>
+                      <TableCell className="text-xs font-medium">{s.name}</TableCell>
+                      <TableCell className="text-xs text-right font-mono">{s.area}</TableCell>
+                      <TableCell className="text-xs text-right font-mono">{total.toFixed(4)}</TableCell>
+                      <TableCell className="text-xs text-right font-mono">{s.R1.toFixed(4)}</TableCell>
+                      <TableCell className="text-xs text-right font-mono">{s.R2.toFixed(4)}</TableCell>
+                      <TableCell className="text-xs text-right font-mono">{s.R3.toFixed(4)}</TableCell>
+                      <TableCell className="text-xs text-right">
+                        <Badge variant={s.nse >= 0.75 ? "default" : s.nse >= 0.5 ? "secondary" : "destructive"} className="text-[10px]">
+                          {(s.nse * 100).toFixed(0)}%
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-xs">
+                        <Badge variant="outline" className="text-[10px]">{responseType}</Badge>
+                      </TableCell>
+                      <TableCell>
+                        <Button variant="ghost" size="sm" className="h-6 w-6 p-0" onClick={() => removeEntry(s.id)} data-testid={`button-delete-sewershed-${s.id}`}>
+                          <Trash2 className="h-3 w-3" />
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          </ScrollArea>
+        ) : (
+          <p className="text-xs text-muted-foreground text-center py-4">
+            No sewersheds saved yet. Run calibration and add results for each sewershed.
+          </p>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
 
 export function CompareTab({ onNext }: CompareTabProps) {
   const { optimizationResults, selectedSolutionIndex, setSelectedSolutionIndex, rdiiSeries } = useCalibrationData();
@@ -182,6 +336,8 @@ export function CompareTab({ onNext }: CompareTabProps) {
       <ParameterCorrelationMatrix />
 
       <CalibrationProjectManager />
+
+      <MultiSewershedComparison />
 
       {onNext && (
         <div className="flex justify-end">

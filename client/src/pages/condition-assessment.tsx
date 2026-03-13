@@ -50,6 +50,7 @@ import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/
 import { useToast } from "@/hooks/use-toast";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import type { Project, ConditionAssessment, RDIIParameters } from "@shared/schema";
+import { RehabPredictor } from "@/components/rehab-predictor";
 
 const chartConfig = {
   preRehab: { label: "Pre-Rehabilitation", color: "hsl(var(--destructive))" },
@@ -833,6 +834,8 @@ export default function ConditionAssessmentPage() {
           </div>
         </>
       )}
+
+      <RehabPredictor />
     </div>
   );
 }

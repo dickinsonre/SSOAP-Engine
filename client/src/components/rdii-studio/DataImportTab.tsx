@@ -1,5 +1,5 @@
 import { useState, useCallback } from "react";
-import { Upload, FileText, ArrowRight, Database, Calendar, Hash, AlertCircle, CheckCircle2, TableProperties, ChevronDown, ChevronRight, Copy, Check, Terminal } from "lucide-react";
+import { Upload, FileText, ArrowRight, Database, Calendar, Hash, AlertCircle, CheckCircle2, TableProperties, ChevronDown, ChevronRight, Copy, Check, Terminal, CloudRain, MapPin } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -11,6 +11,23 @@ import { ColumnMappingDialog } from "@/components/column-mapping-dialog";
 import type { MappedData } from "@/components/column-mapping-dialog";
 import { ICM_RUBY_SCRIPTS, ICM_WORKFLOW_GUIDE } from "@/lib/icmRubyScripts";
 import type { ICMScript } from "@/lib/icmRubyScripts";
+import { HISTORICAL_STORMS, REGIONS, RETURN_PERIODS, filterStorms, stormToTimeSeriesData } from "@/lib/historicalStorms";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   AreaChart,
   Area,
@@ -93,6 +110,9 @@ export function DataImportTab({ onNext }: DataImportTabProps) {
   const [importSuccess, setImportSuccess] = useState<string | null>(null);
   const [columnMappingOpen, setColumnMappingOpen] = useState(false);
   const [icmSectionOpen, setIcmSectionOpen] = useState(false);
+  const [stormSectionOpen, setStormSectionOpen] = useState(false);
+  const [stormRegion, setStormRegion] = useState("All");
+  const [stormReturn, setStormReturn] = useState("All");
 
   const handleMappedImport = useCallback((data: MappedData[], fileName: string) => {
     const timestamps = data.map(d => d.timestamp);
@@ -237,7 +257,7 @@ export function DataImportTab({ onNext }: DataImportTabProps) {
             <label className="cursor-pointer">
               <FileText className="mr-2 h-4 w-4" />
               {importing ? "Importing..." : "Browse Files"}
-              <input type="file" className="hidden" multiple accept=".csv,.dat,.inp,.tsv,.txt" onChange={handleFileInput} />
+              <input type="file" className="hidden" multiple accept=".csv,.dat,.inp,.tsv,.txt,.prn" onChange={handleFileInput} />
             </label>
           </Button>
           <Button variant="outline" onClick={handleLoadSample} disabled={loadingSample || sampleDataLoaded} data-testid="button-load-sample">
@@ -393,6 +413,118 @@ export function DataImportTab({ onNext }: DataImportTabProps) {
                   <ScriptBlock key={script.id} script={script} />
                 ))}
               </div>
+            </CardContent>
+          </CollapsibleContent>
+        </Card>
+      </Collapsible>
+
+      <Collapsible open={stormSectionOpen} onOpenChange={setStormSectionOpen}>
+        <Card>
+          <CollapsibleTrigger asChild>
+            <CardHeader className="cursor-pointer hover:bg-muted/30 transition-colors pb-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle className="text-sm flex items-center gap-2">
+                    <CloudRain className="h-4 w-4" />
+                    Historical Storm Library
+                  </CardTitle>
+                  <CardDescription className="text-xs mt-1">
+                    {HISTORICAL_STORMS.length} notable US storms with hourly rainfall for calibration testing
+                  </CardDescription>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Badge variant="secondary" className="text-xs">{HISTORICAL_STORMS.length} Storms</Badge>
+                  {stormSectionOpen ? <ChevronDown className="h-4 w-4 text-muted-foreground" /> : <ChevronRight className="h-4 w-4 text-muted-foreground" />}
+                </div>
+              </div>
+            </CardHeader>
+          </CollapsibleTrigger>
+          <CollapsibleContent>
+            <CardContent className="space-y-3 pt-0">
+              <div className="flex gap-2">
+                <div className="flex-1">
+                  <Select value={stormRegion} onValueChange={setStormRegion}>
+                    <SelectTrigger className="h-8 text-xs" data-testid="select-storm-region">
+                      <SelectValue placeholder="Region" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="All">All Regions</SelectItem>
+                      {REGIONS.map(r => <SelectItem key={r} value={r}>{r}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="flex-1">
+                  <Select value={stormReturn} onValueChange={setStormReturn}>
+                    <SelectTrigger className="h-8 text-xs" data-testid="select-storm-return">
+                      <SelectValue placeholder="Return Period" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="All">All Return Periods</SelectItem>
+                      {RETURN_PERIODS.map(r => <SelectItem key={r} value={r}>{r}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <ScrollArea className="h-[300px]">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="text-xs">Storm</TableHead>
+                      <TableHead className="text-xs">Region</TableHead>
+                      <TableHead className="text-xs text-right">Depth (in)</TableHead>
+                      <TableHead className="text-xs text-right">Duration</TableHead>
+                      <TableHead className="text-xs text-right">Return</TableHead>
+                      <TableHead className="text-xs"></TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filterStorms({ region: stormRegion, returnPeriod: stormReturn }).map(storm => (
+                      <TableRow key={storm.id} data-testid={`row-storm-${storm.id}`}>
+                        <TableCell className="text-xs">
+                          <div>
+                            <span className="font-medium">{storm.name}</span>
+                            <span className="text-muted-foreground ml-1">({storm.date.slice(0, 4)})</span>
+                          </div>
+                          <div className="text-[10px] text-muted-foreground truncate max-w-[200px]">{storm.description}</div>
+                        </TableCell>
+                        <TableCell className="text-xs">
+                          <div className="flex items-center gap-1">
+                            <MapPin className="h-3 w-3" />
+                            {storm.region}
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-xs text-right font-mono">{storm.totalDepthIn.toFixed(1)}</TableCell>
+                        <TableCell className="text-xs text-right font-mono">{storm.durationHrs}h</TableCell>
+                        <TableCell className="text-xs text-right">
+                          <Badge variant="outline" className="text-[10px]">{storm.returnPeriod}</Badge>
+                        </TableCell>
+                        <TableCell>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-6 text-xs"
+                            onClick={() => {
+                              const ts = stormToTimeSeriesData(storm);
+                              setRainfallData({
+                                timestamps: ts.timestamps,
+                                values: ts.values,
+                                units: "in",
+                                seriesName: `Rainfall - ${storm.name}`,
+                                format: "storm-library",
+                              });
+                              setImportSuccess(`Loaded ${storm.name} (${storm.durationHrs}h, ${storm.totalDepthIn}" total)`);
+                              setTimeout(() => setImportSuccess(null), 4000);
+                            }}
+                            data-testid={`button-load-storm-${storm.id}`}
+                          >
+                            Load
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </ScrollArea>
             </CardContent>
           </CollapsibleContent>
         </Card>
